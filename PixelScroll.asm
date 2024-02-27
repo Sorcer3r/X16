@@ -10,7 +10,7 @@
 main: {
 
 // put some chars on screen for reference
-    ldx #3
+    ldx #4
 l0:
     lda #47
     sta FirstChar
@@ -26,6 +26,17 @@ l1:
     backupVeraAddrInfo()
 
 	addressRegister(0,$1c000,1,0)
+
+// put chars + colour on line to scroll
+	ldy #$80
+!loop:
+	sta VERADATA0
+    lda colour
+    inc colour
+    sta VERADATA0
+    dey
+	bne !loop-
+
 
 // put chars + colour on line to scroll
 	ldy #$80
@@ -53,13 +64,28 @@ waitforline134:
     cmp #134
     bne waitforline134
 
+    lda hscroll
+    asl
+    sta VERA_L1_hscrollLow
+
+
+waitforline142:
+    lda VERASCANLINE
+    cmp #142
+    bne waitforline142
+
+
 //reset Hscroll
     stz VERA_L1_hscrollLow
 
 //test if we scrolled 8 pixels (could do 32 using only hscroll low but line copy would need more work and i'm lazy))
     lda hscroll
     cmp #8
-    bne skiplinecopy
+    beq docopy
+    wai
+
+    jmp CharLooper
+docopy:
 // Copy That line elsewhere (Only the Character)
  	addressRegister(0,$1c000,1,0)
  	addressRegister(1,$1c000,1,0)
@@ -81,9 +107,43 @@ waitforline134:
      sta VERADATA1
      lda FirstColour
      sta VERADATA1
+//do second line but twice
+    ldx #2
+
+line2scroll:
+ 	addressRegister(0,$1c100,1,0)
+ 	addressRegister(1,$1c100,1,0)
+
+     lda VERADATA0
+     sta FirstChar
+     lda VERADATA0
+     sta FirstColour
+
+ // Setting up line of H's
+ 	ldy #160
+ !lineshift:
+ 	lda VERADATA0
+ 	sta VERADATA1
+ 	dey
+ 	bne !lineshift-
+//put first char back on end of line
+     lda FirstChar
+     sta VERADATA1
+     lda FirstColour
+     sta VERADATA1
+
+    dex
+    bne line2scroll
+
+
+
 //reset hscroll if we shifted data
+
+
     stz hscroll
 skiplinecopy:
+
+
     wai
 
     jmp CharLooper
