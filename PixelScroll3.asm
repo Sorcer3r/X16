@@ -9,6 +9,10 @@
 
 main: {
 
+    // make move bytes macro .
+    // copy first to last first  then move 80 < (or 81<) - quicker for more than 1 chaar i think
+    
+
 // put some chars on screen for reference
     ldx #4
 l0:
