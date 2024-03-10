@@ -76,8 +76,8 @@ veraAddr: .byte 0,0,0,0
     addressRegister(1,destination,1,0)
     } else {
     // source below dest - do backwards starting at end
-    addressRegister(0,source + bytecount-1,1,1)
-    addressRegister(1,destination+bytecount-1,1,1)
+    addressRegister(0,source + bytecount-2,1,1)
+    addressRegister(1,destination+bytecount-2,1,1)
     }
     ldy #bytecount
 copyloop:
