@@ -68,7 +68,7 @@ veraAddr: .byte 0,0,0,0
     sta VERACTRL
  }
 
- .macro copyVERAData(source,destination,bytecount)
+ .macro copyVERAData(source,destination,bytecount) // max 256 bytes
 {
     // source greater than dest - regular copy
     .if (source > destination) {
@@ -85,4 +85,34 @@ copyloop:
  	sta VERADATA1
  	dey
  	bne copyloop
+}
+
+.macro copyDataToVera(source,destination,bytecount) 
+// source in x16 ram. dest is vera location, bytecount max 65535
+// destroys a,x,y
+{
+addressRegister(0,destination,1,0)
+lda counter: $deaf
+lda #bytecount & $ff
+sta counter
+lda #(bytecount >> 8) & $ff
+sta counter+1
+lda #source & $ff
+sta copyFrom
+lda #(source >>8) & $ff
+sta copyFrom + 1
+
+loop:
+lda copyFrom: $deaf
+sta VERADATA0
+inc copyFrom
+bne skip1
+inc copyFrom+1
+skip1:
+dec counter
+//lda countLo: $00
+bne loop
+dec counter+1
+//lda countHi: $00
+bpl loop
 }

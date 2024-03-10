@@ -33,8 +33,10 @@
 .const VRAM_layer0_map   = $00000
 .const VRAM_lowerchars   = $0B000
 .const VRAM_lower_rev    = VRAM_lowerchars + 128*8
+.const SPRITEDATA        = $13000
 .const VRAM_petscii      = $1F000
-.const VRAMPalette      = $1FA00
+.const VRAMPalette       = $1FA00
+.const SPRITEREGBASE     = $1FC00
 
 // ROM Banks
 .const ROM_BANK          = $01
@@ -50,3 +52,5 @@
 .const DCSCALEx32 = $04
 .const DCSCALEx64 = $02
 .const DCSCALEx128 = $01
+
+.const SPRITEENABLE = $40
