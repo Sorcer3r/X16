@@ -53,10 +53,10 @@ startHere:
     // 7	Sprite height (2)	 Sprite width (2)	 Palette offset (4)
 
 dospritebits:
-    lda #(SPRITEDATA + 512 >> 5) & $ff
+    lda #(SPRITEDATA + 000 >> 5) & $ff
     sta VERADATA0
     sta sprite
-    lda #(SPRITEDATA + 512 >> 13) & $0f
+    lda #(SPRITEDATA + 000 >> 13) & $0f
     sta VERADATA0
     lda #$00
     sta xpos
@@ -70,7 +70,7 @@ dospritebits:
     sta VERADATA0
     lda #$0c
     sta VERADATA0
-    lda #$56
+    lda #$50
     sta VERADATA0
 
 //setup int
@@ -111,6 +111,16 @@ noInc:
     lda #0
     sta xpos
     sta xposHi
+    addressRegister(0,SPRITEREGBASE,1,0)
+    lda sprite
+    clc
+    adc #$08
+    and #$9f
+    sta sprite
+    sta VERADATA0
+    addressRegister(0,SPRITEREGBASE+3,1,0)
+    lda #$00
+
 storeMe:
     lda xposHi
     sta VERADATA0
@@ -146,5 +156,5 @@ scrolltext: .text "this is the scrolling text message that will fit on one compl
             .text " screen line including all the characters hiding off screen..   "
 
 spriteData:
-.import binary "E:\X16\mine\spacesprites16x164bpp.SPR"
+.import binary "E:\X16\mine\invaders.SPR"
 spriteDataEnd:
