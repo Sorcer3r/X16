@@ -139,22 +139,7 @@ exit:
 
 }
 
-//data storage
-colour:	.byte 0
-hscroll: .byte 0
-hscroll2: .byte 0
-FirstChar: .byte 0
-FirstColour: .byte 0
-SecondChar: .byte 0
-SecondColour: .byte 0
-
 .align $100
-.encoding "screencode_mixed"
-
-
-scrolltext: .text "this is the scrolling text message that will fit on one complete"
-            .text " screen line including all the characters hiding off screen..   "
-
 spriteData:
-.import binary "E:\X16\mine\invaders.SPR"
+.import binary "C:\c64\MySource\X16\invaders.SPR"
 spriteDataEnd:
