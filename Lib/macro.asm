@@ -88,8 +88,8 @@ copyloop:
 }
 
 .macro copyDataToVera(source,destination,bytecount) 
-// source in x16 ram. dest is vera location, bytecount max 65535
-// destroys a,x,y
+// source is x16 memory . dest is vera location, bytecount max 65535
+// destroys a
 {
 addressRegister(0,destination,1,0)
 lda counter: $deaf
@@ -110,9 +110,7 @@ bne skip1
 inc copyFrom+1
 skip1:
 dec counter
-//lda countLo: $00
 bne loop
 dec counter+1
-//lda countHi: $00
 bpl loop
 }
