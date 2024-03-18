@@ -17,7 +17,7 @@ main: {
     ora #SPRITEENABLE
     sta VERA_DC_video
 
-	jsr setupSomeSprites
+	jsr setupSomeSprites  //this is garbage code but got some sprites active :)
 
 
 
