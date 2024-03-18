@@ -1,5 +1,6 @@
 #importonce
 // macro files
+#import "constants.asm"
 
 veraAddr: .byte 0,0,0,0
 
