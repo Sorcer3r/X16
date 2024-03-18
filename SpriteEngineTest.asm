@@ -2,9 +2,11 @@
 
 #import "Lib\constants.asm"
 #import "Lib\petscii.asm"
-#import "Int.asm"
 #import "Lib\macro.asm"
 #import "SpriteArray.asm"
+#import "Int.asm"
+#import "SpriteEngine.asm"
+
 
 *=$0801
 	BasicUpstart2(main)
@@ -38,6 +40,15 @@ main: {
     sta $315
     cli    
   	restoreVeraAddrInfo()    
+
+gameLoop:
+	wai
+	jsr spriteEngine.processSprites
+	jsr spriteEngine.checkLimits
+	bra gameLoop
+
+
+
 	rts
 }
 
@@ -88,7 +99,7 @@ l2:
 	sta SpriteArray.speedxCtrl,x
 	lda #5
 	sta SpriteArray.speedyCtrl,x
-	lda #4
+	lda #8
 	sta SpriteArray.frameCtrl,x
 inx							//sprite 1
 	lda #40
