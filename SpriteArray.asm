@@ -24,23 +24,23 @@ SpriteArray:
     .label width = %00110000
     .label palette = %00001111
 
-    status:     .fill TOTALSPRITES,$80  // bit 7: 0 = active,1=unused. 6:0 frame number (offset for imagePtr)
+    status:     .fill TOTALSPRITES,$80  // bit 7: 0 = active,1=unused. 5:0 frame number (offset for imagePtr)
     imagePtr:   .fill TOTALSPRITES,0    // image number 0-255 base. offset with status
     xLo:        .fill TOTALSPRITES,0    // x 0:7
     xHi:        .fill TOTALSPRITES,0    // x 8:15 / only 8:9 used by vera but kept full 16bit for sign
     yLo:        .fill TOTALSPRITES,0    // y 0:7
     yHi:        .fill TOTALSPRITES,0    // y 8:15 / only 8:9 used by vera but kept full 16bit for sign
-    ATTR1:      .fill TOTALSPRITES,$0c   // as VERA reg 6: Collision Mask(7:4) zDepth(3:2) vFlip(1) hFlip(0)
-    ATTR2:      .fill TOTALSPRITES,$50   // as VERA reg 7: height(7:6) width(5:4) palette (3:0)
+    ATTR1:      .fill TOTALSPRITES,$0c  // as VERA reg 6: Collision Mask(7:4) zDepth(3:2) vFlip(1) hFlip(0)
+    ATTR2:      .fill TOTALSPRITES,$50  // as VERA reg 7: height(7:6) width(5:4) palette (3:0)
     xDelta:     .fill TOTALSPRITES,1    // x movement delta -128($80) to +127($7f). extended to 16 bit in engine      
-    yDelta:     .fill TOTALSPRITES,-1    // y movement delta -128($80) to +127($7f). extended to 16 bit in engine
-    speedxTicks: .fill TOTALSPRITES,0    // cycle counter for movement speed. incremented each frame by engine
-    speedyTicks: .fill TOTALSPRITES,0    // cycle counter for movement speed. incremented each frame by engine
+    yDelta:     .fill TOTALSPRITES,-1   // y movement delta -128($80) to +127($7f). extended to 16 bit in engine
+    speedxTicks: .fill TOTALSPRITES,0   // cycle counter for movement speed. incremented each frame by engine
+    speedyTicks: .fill TOTALSPRITES,0   // cycle counter for movement speed. incremented each frame by engine
     frameTicks: .fill TOTALSPRITES,0    // cycle counter for frame animation. incremented each frame by engine
-    speedxCtrl:  .fill TOTALSPRITES,1    // do move when speedCtr = speed. reset speedTicks
-    speedyCtrl:  .fill TOTALSPRITES,40    // do move when speedCtr = speed. reset speedTicks
-    frameCtrl:  .fill TOTALSPRITES,17    // inc frame number(Status) when frameCtr = frames. reset frameTicks
-    numFrames:  .fill TOTALSPRITES,2    // Number of frames for this sprite
+    speedxCtrl:  .fill TOTALSPRITES,1   // do move when speedxTicks = speedxCtrl. reset speedxTicks
+    speedyCtrl:  .fill TOTALSPRITES,40  // do move when speedyyTicks = speedyCtrl. reset speedyTicks
+    frameCtrl:  .fill TOTALSPRITES,17   // when frameTicks = frameCtrl, change frame number(Status). numFrames(7:6) determines sequence.  reset frameTicks
+    numFrames:  .fill TOTALSPRITES,2    // bit 7: normal(0)/reversing(1). bit 6  current direction up(0) down(1) 5:0 Number of frames for this sprite
 
     // address table contains location of spriteimage in VERA space
     // as per reg 0 and 1 of each VERA sprite

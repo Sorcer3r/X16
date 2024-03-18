@@ -62,19 +62,18 @@ spraddr1:
 	asl
 	asl
 	asl
-	asl
+
 	clc
 	adc #$a8
 	sta SpriteArray.addressTableLo+8,x
+	bcc l2
+	inc SpriteArray.addressTableHi+8,x
+l2:
 	inx
-	cpx #4
+	cpx #14
 	bne spraddr1
 
-
-
-
-
-	ldx #0
+	ldx #0			//sprite 0
 	lda #10
 	sta SpriteArray.xLo,x
 	sta SpriteArray.yLo,x
@@ -91,7 +90,7 @@ spraddr1:
 	sta SpriteArray.speedyCtrl,x
 	lda #4
 	sta SpriteArray.frameCtrl,x
-inx
+inx							//sprite 1
 	lda #40
 	sta SpriteArray.xLo,x
 	sta SpriteArray.yLo,x
@@ -110,7 +109,7 @@ inx
 	sta SpriteArray.speedyCtrl,x
 		lda #30
 	sta SpriteArray.frameCtrl,x
-inx
+inx						//sprite 2
 	lda #$f7
 	sta SpriteArray.xLo,x
 	lda #1
@@ -131,7 +130,7 @@ inx
 	sta SpriteArray.speedyCtrl,x
 		lda #15
 	sta SpriteArray.frameCtrl,x
-inx
+inx								//sprite 3
 	lda #20
 	sta SpriteArray.xLo,x
 	lda #87
@@ -150,7 +149,7 @@ inx
 	sta SpriteArray.speedyCtrl,x
 		lda #10
 	sta SpriteArray.frameCtrl,x
-inx
+inx					//sprite 4
 	lda #20
 	sta SpriteArray.xLo,x
 	lda #80
@@ -169,7 +168,7 @@ inx
 	sta SpriteArray.speedyCtrl,x
 		lda #3
 	sta SpriteArray.frameCtrl,x
-inx
+inx					///sprite 5
 	lda #8
 	sta SpriteArray.xLo,x
 	lda #15
@@ -177,7 +176,7 @@ inx
 	lda #8
 	sta SpriteArray.imagePtr,x
 	lda #0
-	//sta SpriteArray.status,x
+	sta SpriteArray.status,x //enable
 	lda #2
 	sta SpriteArray.xDelta,x
 	lda #1
@@ -186,19 +185,17 @@ inx
 	sta SpriteArray.speedxCtrl,x
 	lda #7
 	sta SpriteArray.speedyCtrl,x
-	lda #5
+	lda #6
 	sta SpriteArray.frameCtrl,x
 	lda #$a0
 	sta SpriteArray.ATTR2,x
-	lda #4
+	lda #$8a //#14  // set bit 7 for reversing sequence
 	sta SpriteArray.numFrames,x
 
 rts
 
 }
-
-
-
+*=$6000
 //#import "SpriteArray.asm"
 .align $100
 spriteData:
@@ -206,5 +203,5 @@ spriteData:
 spriteDataEnd:
 
 spriteMore:
-.import binary "C:\c64\MySource\X16 - SpriteEngine\osk.SPR"
+.import binary "C:\c64\MySource\X16 - SpriteEngine\flip10.RAW"
 spriteMoreEnd:
