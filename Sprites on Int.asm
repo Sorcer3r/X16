@@ -43,6 +43,7 @@ startHere:
     sta VERA_DC_video
 
     addressRegister(0,SPRITEREGBASE,1,0)
+    addressRegister(1,SPRITEREGBASE + 8,1,0)
     // 0	Address (12:5)
     // 1	Mode (1)	-(3)	Address (16:13)
     // 2	X (7:0)
@@ -55,23 +56,38 @@ startHere:
 dospritebits:
     lda #(SPRITEDATA + 000 >> 5) & $ff
     sta VERADATA0
+    sta VERADATA1
     sta sprite
     lda #(SPRITEDATA + 000 >> 13) & $0f
     sta VERADATA0
+    sta VERADATA1
+    //x
     lda #$00
     sta xpos
     sta VERADATA0
+    lda #-2
+    sta VERADATA1
     lda #0
     sta xposHi
     sta VERADATA0
+    lda #3
+    sta VERADATA1
+    //y
     lda #0
     sta VERADATA0
+    lda #50
+    sta VERADATA1
     lda #0
     sta VERADATA0
-    lda #$0c
+    sta VERADATA1
+    // mask
+    lda #$0C //0c
     sta VERADATA0
+    sta VERADATA1
+    //size
     lda #$50
     sta VERADATA0
+    sta VERADATA1
 
 //setup int
     lda $314
@@ -108,8 +124,9 @@ noInc:
     txa
     cmp #$80
     bne storeMe
-    lda #0
+    lda #-20
     sta xpos
+    lda #3
     sta xposHi
     addressRegister(0,SPRITEREGBASE,1,0)
     lda sprite

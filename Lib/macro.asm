@@ -1,3 +1,4 @@
+#importonce
 // macro files
 
 veraAddr: .byte 0,0,0,0

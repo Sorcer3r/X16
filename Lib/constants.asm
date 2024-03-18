@@ -1,3 +1,4 @@
+#importonce 
 // Constants file
 
 // VERA
@@ -36,7 +37,7 @@
 .const SPRITEDATA        = $13000
 .const VRAM_petscii      = $1F000
 .const VRAMPalette       = $1FA00
-.const SPRITEREGBASE     = $1FC00
+.const VERASPRITEBASE    = $1FC00
 
 // ROM Banks
 .const ROM_BANK          = $01
