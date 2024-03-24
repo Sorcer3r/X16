@@ -38,7 +38,7 @@ SpriteArray:
     speedyTicks: .fill TOTALSPRITES,0   // cycle counter for movement speed. incremented each frame by engine
     frameTicks: .fill TOTALSPRITES,0    // cycle counter for frame animation. incremented each frame by engine
     speedxCtrl:  .fill TOTALSPRITES,1   // do move when speedxTicks = speedxCtrl. reset speedxTicks
-    speedyCtrl:  .fill TOTALSPRITES,40  // do move when speedyyTicks = speedyCtrl. reset speedyTicks
+    speedyCtrl:  .fill TOTALSPRITES,40  // do move when speedyTicks = speedyCtrl. reset speedyTicks
     frameCtrl:  .fill TOTALSPRITES,17   // when frameTicks = frameCtrl, change frame number(Status). numFrames(7:6) determines sequence.  reset frameTicks
     numFrames:  .fill TOTALSPRITES,2    // bit 7: normal(0)/reversing(1). bit 6  current direction up(0) down(1) 5:0 Number of frames for this sprite
 
