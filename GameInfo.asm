@@ -55,7 +55,7 @@
 
 
 
-// sprites 10 16x8(64).txt     alien(2frames) 10pt 20pt 30pt, player base(4 frames) player, 2 explosion frames , alien exlpoded
+// sprites 10 16x8(64).txt     alien(2frames) 10pt 20pt 30pt,  player, 2 explosion frames , alien exlpoded
 // 640 bytes $280  - stored at $13000 + $40 per sprite , Vera addr is +2 per sprite
 // starts $13000 ends $1327f
 // sprites 0-9

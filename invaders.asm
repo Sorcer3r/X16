@@ -8,32 +8,167 @@
 
 invaders:{
 
-// build 11*5 array 1st row is lowest
-addInvader:{
-stz game.status
-lda #2 
-sta game.numFrames
-sta game.imagePtr
-lda #55
-sta game.xLo
-sta game.yLo
-stz game.xHi
-stz game.yHi
-lda #12
-sta game.ATTR1
-lda #$50
-sta game.ATTR2
-lda #1
-sta game.xDelta
-stz game.yDelta
-stz game.speedxTicks
-stz game.speedyTicks
-stz game.frameTicks
-stz game.speedxCtrl
-stz game.speedyCtrl
-stz game.frameCtrl
-jsr spriteEngine.insertIntoArray
-brk
-
+initialiseInvaders:{
+    //x = 28 + 24per
+    //y =120 - 26 per row
+    lda #$30  // 28
+    sta setInvaderBasics.setXlo
+    lda #$78 // 120 
+    sta setInvaderBasics.setYlo
+    lda #$04
+    sta setInvaderBasics.setType
+    lda #$00
+    sta setInvaderBasics.setXhi
+    sta invaderArrayIndex
+    sta invaderArrayX
+    sta invaderArrayY
+    sta invadersLiving
+    sta invadersFalling
+    sta setStopDrop.newXdelta
+    rts
 }
+// build 11*5 array 1st row is lowest
+add1Invader:{
+    jsr setInvaderBasics
+    jsr spriteEngine.insertIntoArray        // returns slot used in y
+    cpy #SpriteArray.TOTALSPRITES
+    beq exit
+    ldx invaderArrayIndex
+    tya
+    inc
+    sta invaderArray,x      //array value is sprite#+1
+    inc invadersLiving
+    inc invaderArrayIndex
+    inc invaderArrayX
+    lda invaderArrayX
+    cmp #11
+    beq nextRow
+    lda setInvaderBasics.setXlo
+    clc
+    adc #20 //24 x offset
+    sta setInvaderBasics.setXlo
+    lda setInvaderBasics.setXhi
+    adc #0
+    sta setInvaderBasics.setXhi
+    bra exit
+nextRow:
+    stz invaderArrayX
+    stz setInvaderBasics.setXhi
+    lda #$30  // 28
+    sta setInvaderBasics.setXlo
+    lda setInvaderBasics.setYlo
+    clc
+    sbc #12     // 16 y shiftr row
+    sta setInvaderBasics.setYlo
+    inc invaderArrayY
+    ldy invaderArrayY
+    lda invaderYSprite,y
+    sta setInvaderBasics.setType
+exit:    
+    rts
+}
+
+setInvaderBasics:{
+lda setType: #$00
+sta game.arrayLoad.imagePtr
+lda #2
+sta game.arrayLoad.numFrames
+lda setXlo: #$00
+sta game.arrayLoad.xLo
+lda setXhi: #$00
+sta game.arrayLoad.xHi
+lda setYlo: #$00
+sta game.arrayLoad.yLo
+lda #$0c  //12
+sta game.arrayLoad.ATTR1
+lda #$10
+sta game.arrayLoad.ATTR2
+lda #4                     //default x delta
+sta game.arrayLoad.xDelta
+lda #$00
+sta game.arrayLoad.status
+sta game.arrayLoad.yHi
+sta game.arrayLoad.yDelta
+sta game.arrayLoad.speedxTicks
+sta game.arrayLoad.speedyTicks
+sta game.arrayLoad.frameTicks
+sta game.arrayLoad.speedxCtrl
+sta game.arrayLoad.speedyCtrl
+sta game.arrayLoad.frameCtrl
+rts
+}
+
+setStopDrop:{
+    ldy #$00
+setStop:
+    lda invaderArray,y
+    beq next
+    dec
+    tax
+    stz SpriteArray.yDelta,x    //zero Y delta
+    lda newXdelta: #$00 
+    sta SpriteArray.xDelta,x    // restore x delta (already inverted from set fall)
+next:
+    iny
+    cpy #55
+    bne setStop
+    stz newXdelta
+    rts
+}
+
+setStartDrop:{
+    ldy #$00
+setStart:
+    lda invaderArray,y
+    beq next
+    dec
+    tax
+    lda SpriteArray.xDelta,x
+    sta setStopDrop.newXdelta
+    stz SpriteArray.xDelta,x    //zero x delta
+    lda #8 
+    sta SpriteArray.yDelta,x    // set Y delta
+next:
+    iny
+    cpy #55
+    bne setStart
+    lda #0
+    sec
+    sbc setStopDrop.newXdelta
+    sta setStopDrop.newXdelta
+    rts
+}
+
+findInvader:{
+	lda invadersLiving
+	clc
+	beq exit		// no living invaders
+	ldx invaderArrayIndex
+findInv1:
+	lda invaderArray,x
+	bne alive	
+	inc invaderArrayIndex
+	ldx invaderArrayIndex
+	cpx #55
+	bne findInv1
+	ldx #$00
+	stx invaderArrayIndex
+	bra findInv1
+alive:	
+	dec
+	tax
+	sec
+exit:	
+	rts
+}
+
+invaderArray:       .fill 55,0
+invadersLiving:     .byte 0
+invaderArrayIndex:  .byte 0 
+invaderArrayX:      .byte 0
+invaderArrayY:      .byte 0
+invadersFalling:    .byte 0
+livingCycle:        .byte 0
+invaderYSprite:     .byte 4,4,2,2,0
+
 }

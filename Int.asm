@@ -72,7 +72,7 @@ line1:
     lda VERAINTENABLE
     ora #$80
     sta VERAINTENABLE
-    lda #$90
+    lda #$70
     //bra lineExit
 lineExit:
     sta VERASCANLINE
@@ -80,7 +80,7 @@ lineExit2:
     bra exit
 lowerHalf:
    lda VERASCANLINE
-   cmp #$90
+   cmp #$70
    bne lineExit2
     lda VERASCANLINE 
     lda #$f0

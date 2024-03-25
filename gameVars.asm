@@ -7,12 +7,9 @@
 .const SPRITESHIELDBASE = $13460
 .const SPRITESPACESHIPBASE = $13760
 
+game:{
 
-//* = $22 "zeropage" virtual
-
-.label game = $22 {
-
-arrayLoad:
+arrayLoad:{
     status:         .byte 0     // bit 7: 0 = active,1=unused. 5:0 frame number (offset for imagePtr)
     imagePtr:       .byte 0     // image number 0-255 base. offset with status
     xLo:            .byte 0     // x 0:7
@@ -30,7 +27,7 @@ arrayLoad:
     speedyCtrl:     .byte 0     // do move when speedyTicks = speedyCtrl. reset speedyTicks
     frameCtrl:      .byte 0     // when frameTicks = frameCtrl, change frame number(Status). numFrames(7:6) determines sequence.  reset frameTicks
     numFrames:      .byte 0     // bit 7: normal(0)/reversing(1). bit 6  current direction up(0) down(1) 5:0 Number of frames for this sprite
-
+    }
 
 
 }

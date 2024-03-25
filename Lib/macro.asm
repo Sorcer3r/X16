@@ -1,6 +1,7 @@
 #importonce
 // macro files
 #import "constants.asm"
+.label veraAddr = $0100  //: .byte 0,0,0,0
 
 .macro skip1Byte() {  // 2 byte nop 65c02
     .byte $42
@@ -13,8 +14,6 @@
 .macro break(){         // 65c02 STP
     .byte $db
 }
-
-.label veraAddr = $0100  //: .byte 0,0,0,0
 
 .macro addressRegister(control,address,increment,direction) {
 	

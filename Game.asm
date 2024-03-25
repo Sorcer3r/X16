@@ -7,10 +7,13 @@
 #import "SpriteArray.asm"
 #import "Int.asm"
 #import "SpriteEngine.asm"
-#import "gameVars.asm"
+//#import "gameVars.asm"
 #import "screen.asm"
 #import "invaders.asm"
+#import "player.asm"
 
+* = $22 "zeropage" virtual
+#import "gameVars.asm"
 
 *=$0801
 	BasicUpstart2(main)
@@ -32,9 +35,9 @@ main: {
 
 	jsr screen.cls
 	jsr screen.scoreText
-	jsr setupSomeSprites  //this is garbage code but got some sprites active :)
+	//jsr setupSomeSprites  //this is garbage code but got some sprites active :)
 
-//setup interrupt
+	//setup interrupt
 
     lda $314
     sta moveSpritesInt.intReturn
@@ -46,7 +49,7 @@ main: {
     lda #(moveSpritesInt >> 8) & $ff
     sta $315
 	restoreVeraAddrInfo() 
-	lda #$30			// first line int is line 48
+	lda #$30			// first line int is line 48 for red colour1
 	sta VERASCANLINE 
 	lda VERAINTENABLE  
 	and #$7f		// clear bit 8 line int
@@ -54,147 +57,58 @@ main: {
 	sta VERAINTENABLE
     cli    
 
-	jsr invaders.addInvader
+	lda #1 
+	sta gameMode
+	jsr player.addShields
+	jsr player.addPlayer
+	jsr player.addPlayerLives
+	jsr invaders.initialiseInvaders
 	
 gameLoop:
 	lda $ff			// wait for vsync semaphore
 	beq gameLoop
 	stz $ff
 
-	jsr spriteEngine.checkLimits
-	jsr spriteEngine.processSprites
-	//jsr screen.timer
+	lda gameMode
+	cmp #1
+	bne gametestmode2
+	lda invaders.invadersLiving
+	cmp #55
+	beq arrayfull
+	jsr invaders.add1Invader
+	bra gametestmode3
+arrayfull:
+	inc gameMode
+	stz invaders.invaderArrayIndex
+	stz invaders.livingCycle
+	bra gametestmode3
+gametestmode2:
+	cmp #2
+	bne gametestmode3
+	jsr invaders.findInvader
+	bcc gametestmode3		// no living invaders
+	jsr spriteEngine.process1Sprite
+	inc invaders.invaderArrayIndex
+	lda invaders.invaderArrayIndex
+	cmp #55
+	bne checkDoneAllInvaders
+	stz invaders.invaderArrayIndex
+checkDoneAllInvaders:
+	inc invaders.livingCycle
+	lda invaders.livingCycle
+	cmp invaders.invadersLiving
+	bne gametestmode3
+	stz invaders.livingCycle
+	lda invaders.setStopDrop.newXdelta
+	beq checkX
+	jsr invaders.setStopDrop
+checkX:
+	jsr spriteEngine.testXLimit	// carry if we hit an edge
+	bcc gametestmode3
+	jsr invaders.setStartDrop
 
-
+gametestmode3:
 	bra gameLoop
 	rts
 }
-
-
-setupSomeSprites:{
-
-
-
-	ldx #0			//sprite 0
-	lda #20
-	sta SpriteArray.xLo,x
-	sta SpriteArray.yLo,x
-	lda #0
-	sta SpriteArray.imagePtr,x
-	lda #0
-	sta SpriteArray.status,x
-	lda #1
-	sta SpriteArray.xDelta,x
-	lda #-1
-	sta SpriteArray.yDelta,x
-	lda #2
-	sta SpriteArray.speedxCtrl,x
-	lda #2
-	sta SpriteArray.speedyCtrl,x
-	lda #20
-	sta SpriteArray.frameCtrl,x
-	lda #$10	//16*8
-	sta SpriteArray.ATTR2,x
-
-inx							//sprite 1
-	lda #40
-	sta SpriteArray.xLo,x
-	lda #30
-	sta SpriteArray.yLo,x
-	lda #0
-	sta SpriteArray.xHi,x
-	lda #2
-	sta SpriteArray.imagePtr,x
-	lda #0
-	sta SpriteArray.status,x
-	lda #-1
-	sta SpriteArray.xDelta,x
-	lda #1
-	sta SpriteArray.yDelta,x
-	lda #20
-	sta SpriteArray.speedxCtrl,x
-	lda #20
-	sta SpriteArray.speedyCtrl,x
-	lda #60
-	sta SpriteArray.frameCtrl,x
-	lda #$10	//16*8
-	sta SpriteArray.ATTR2,x
-	
-inx						//sprite 2
-	lda #$f7
-	sta SpriteArray.xLo,x
-	lda #0
-	sta SpriteArray.xHi,x
-	lda #$c0
-	sta SpriteArray.yLo,x
-	lda #4
-	sta SpriteArray.imagePtr,x
-	lda #0
-	sta SpriteArray.status,x
-	lda #-1
-	sta SpriteArray.xDelta,x
-	lda #-2
-	sta SpriteArray.yDelta,x
-	lda #20
-	sta SpriteArray.speedxCtrl,x
-	lda #20
-	sta SpriteArray.speedyCtrl,x
-	lda #15
-	sta SpriteArray.frameCtrl,x
-	lda #$10	//16*8
-	sta SpriteArray.ATTR2,x
-	
-
-inx								//sprite 3 spaceship
-	lda #30
-	sta SpriteArray.xLo,x
-	lda #200
-	sta SpriteArray.yLo,x
-	lda #6 // player					// spaceship
-	sta SpriteArray.imagePtr,x
-	lda #0
-	sta SpriteArray.status,x
-	lda #0
-	sta SpriteArray.xDelta,x
-	lda #0
-	sta SpriteArray.yDelta,x
-	lda #0
-	sta SpriteArray.speedxCtrl,x
-	lda #0
-	sta SpriteArray.speedyCtrl,x
-	lda #15
-	sta SpriteArray.frameCtrl,x
-	lda #1
-	sta SpriteArray.numFrames,x
-	lda #$10	//32*8
-	sta SpriteArray.ATTR2,x
-	
-
-inx								//sprite 4
-	lda #20
-	sta SpriteArray.xLo,x
-	lda #$e4
-	sta SpriteArray.yLo,x
-	lda #0
-	sta SpriteArray.yHi,x
-	lda #6
-	sta SpriteArray.imagePtr,x
-	lda #0
-	sta SpriteArray.status,x
-	lda #0
-	sta SpriteArray.xDelta,x
-	lda #0
-	sta SpriteArray.yDelta,x
-	lda #0
-	sta SpriteArray.speedxCtrl,x
-	lda #0
-	sta SpriteArray.speedyCtrl,x
-	lda #0
-	sta SpriteArray.frameCtrl,x
-	lda #1
-	sta SpriteArray.numFrames,x
-	lda #$10	//16*8
-	sta SpriteArray.ATTR2,x
-	
-rts
-}
+gameMode: .byte 0

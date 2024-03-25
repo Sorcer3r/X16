@@ -5,23 +5,36 @@
 #import "Lib\macro.asm"
 #import "gameVars.asm"
 
+// idea - if speedctrl is 0 then always move. same for framectrl
 
 spriteEngine:{
 
 processSprites:{
     ldx #0
 process:     
+    jsr process1Sprite
+    inx
+    cpx #SpriteArray.TOTALSPRITES
+    beq exit
+    jmp process
+exit:
+    rts
+}
+
+process1Sprite:{
     lda SpriteArray.status,x
     bpl spriteActive
-    jmp nextSprite
+    jmp exit
 spriteActive:        
     inc SpriteArray.speedxTicks,x
     inc SpriteArray.speedyTicks,x
     inc SpriteArray.frameTicks,x
 //do x Move checks
-    lda SpriteArray.speedxTicks,x
-    cmp SpriteArray.speedxCtrl,x
+    lda SpriteArray.speedxCtrl,x
+    beq checkDeltaX
+    cmp SpriteArray.speedxTicks,x
     bne noxMove
+checkDeltaX:
     stz SpriteArray.speedxTicks,x
     lda SpriteArray.xDelta,x
     beq noxMove
@@ -42,9 +55,11 @@ addxDeltaHi:
 	sta SpriteArray.xHi,x
 
 noxMove:    //do y Move checks
-    lda SpriteArray.speedyTicks,x
-    cmp SpriteArray.speedyCtrl,x
+    lda SpriteArray.speedyCtrl,x
+    beq checkDeltaY
+    cmp SpriteArray.speedyTicks,x
     bne noyMove
+checkDeltaY:
     stz SpriteArray.speedyTicks,x
     lda SpriteArray.yDelta,x
     beq noyMove
@@ -65,9 +80,11 @@ addyDeltaHi:
 	sta SpriteArray.yHi,x
 
 noyMove:        // do frame change checks
-    lda SpriteArray.frameTicks,x
-    cmp SpriteArray.frameCtrl,x
-    bne nextSprite
+    lda SpriteArray.frameCtrl,x
+    beq changeFrame
+    cmp SpriteArray.frameTicks,x
+    bne exit
+changeFrame:
     stz SpriteArray.frameTicks,x
     lda SpriteArray.numFrames,x
     bpl notreversable
@@ -78,7 +95,7 @@ noyMove:        // do frame change checks
     //  counting down
     dec SpriteArray.status,x
     beq reverseDir
-    bra nextSprite
+    bra exit
 spriteInc: 
     //counting up
     inc SpriteArray.status,x
@@ -87,28 +104,21 @@ spriteInc:
     and #%00111111              // mask off reverse and dir bits
     dec // because we count from 0 and frame count is total number of frames
     cmp SpriteArray.status,x
-    bne nextSprite
+    bne exit
 reverseDir:  
     tya
     eor #%01000000
     sta SpriteArray.numFrames,x
-    bra nextSprite
+    bra exit
 notreversable:    // inc to framemax then back to 0
     inc SpriteArray.status,x
     lda SpriteArray.status,x
     cmp SpriteArray.numFrames,x
-    bne nextSprite
+    bne exit
     stz SpriteArray.status,x
-
-nextSprite:
-    inx
-    cpx #SpriteArray.TOTALSPRITES
-    beq exit
-    jmp process
-exit:
+ exit:    
     rts
 }
-
 // check if at screen edges and reverse dir
 checkLimits:{
     ldx #0
@@ -164,6 +174,37 @@ checkNext:
     rts
 }
 
+testXLimit:{        // carry set if hit an edge
+        ldx #0
+checkActive:    
+    lda SpriteArray.status,x
+    bmi checkNext
+    lda SpriteArray.xDelta,x
+    bmi checkLeft
+    beq checkNext
+    //check right edge
+    lda SpriteArray.xHi,x
+    cmp #1      // was 2
+    bne checkNext
+    lda SpriteArray.xLo,x
+    cmp #$30 //48
+    bcs exit
+    bra checkNext
+checkLeft:
+    lda SpriteArray.xHi,x
+    bne checkNext
+    lda #3
+    cmp SpriteArray.xLo,x
+    bcs exit
+checkNext:
+    inx
+    cmp #SpriteArray.TOTALSPRITES
+    bne checkActive
+    clc
+exit:
+    rts
+}
+
 copyGFXtoVera:{             // -$20 because files includes pallete data we dont need
     copyDataToVera(spriteFiles.spriteAliens,SPRITEALIENBASE,spriteFiles._spriteAliens - spriteFiles.spriteAliens - $20)
     copyDataToVera(spriteFiles.spriteShots,SPRITESHOTBASE,spriteFiles._spriteShots - spriteFiles.spriteShots - $20)
@@ -212,23 +253,18 @@ fillArray:
 }
 
 insertIntoArray:{
-    .label arrayAddr = $fd 
-    jsr findArraySlot
-    cpx #SpriteArray.TOTALSPRITES
+    //.label arrayAddr = $22 
+    jsr findArraySlot       //in y
+    cpy #SpriteArray.TOTALSPRITES
     beq exit    // no room at the inn, not added
-    //txa
-    //clc
-    //adc #<SpriteArray.status
     lda #<SpriteArray.status
     sta arrayAddr
     lda #>SpriteArray.status
     sta arrayAddr+1
-    txa
-    tay     // y is now slot offset
     ldx #$00
 insert1:
     lda game.arrayLoad,x
-    sta (arrayAddr),y
+    sta arrayAddr: $deaf,y
     //sta arrayAddr: $deaf,x
     lda arrayAddr
     clc
@@ -244,13 +280,13 @@ exit:
     rts
 }
 
-findArraySlot:{     // x = index into array, $80 if no slot
-    ldx #0
+findArraySlot:{     // y = index into array, $80 if no slot
+    ldy #0
 checkNext:
-    lda SpriteArray.status,x
-    bpl foundSlot
-    inx
-    cpx #SpriteArray.TOTALSPRITES
+    lda SpriteArray.status,y
+    bmi foundSlot
+    iny
+    cpy #SpriteArray.TOTALSPRITES
     bne checkNext
 foundSlot:
     rts
