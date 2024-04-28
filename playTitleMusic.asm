@@ -26,14 +26,12 @@
 // vol max is 63 %00111111
 // pulse width max  63 %00111111  = 50% 
 
-titleMusic:{
+Music:{
 
 voice1Ptr:  .byte 0
 voice2Ptr:  .byte 0
 voice1Time: .byte 0
 voice2Time: .byte 0
-voice1Decay: .byte 0
-voice1Vol:  .byte 0
 finished:   .byte 0
 
 INT_Save: .word $deaf
@@ -68,7 +66,7 @@ setVoice1:
     sta VERADATA0
     lda titleTune.Voice01+1,x       //freq hi
     sta VERADATA0
-    ora titleTune.Voice01+1,x 
+    ora titleTune.Voice01,x 
     beq v1setVol               //put 0 in vol if freqis 0
     lda #$ff                   //both channels, max vol
 v1setVol:
@@ -155,6 +153,39 @@ IRQ_playTitleMusicX:
     jmp (INT_Save)                  // System IRQ
 }
 
+IRQ_playGameMusic:{
+    dec voice1Time
+    bne IRQ_playGameMusicX  // countdown not zero so exit
+    addressRegister(0,VERAPSG0,1,0)
+    lda voice1Ptr
+    asl             // *2
+    tax
+    lda gameTune+1,x    // check hi note for end of tune
+    bpl setVoice1       // hi freq <$80 so valid note otherwise
+    ldx #$00            // end of tune reached so reset 
+    stx voice1Ptr
+setVoice1:
+    addressRegister(0,VERAPSG0,1,0)
+    lda gameTune,x         //freq low 
+    sta VERADATA0
+    lda gameTune+1,x       //freq hi
+    sta VERADATA0
+//    ora gameTune,x 
+//    beq v1setVol               //put 0 in vol if freqis 0
+    lda #$ff                   //both channels, max vol
+//v1setVol:
+    sta VERADATA0
+    lda #$3f                // %10111111  triangle, 50% duty                
+    sta VERADATA0
+    lda #$09
+    sta voice1Time 
+    inc voice1Ptr
+
+IRQ_playGameMusicX:
+    jmp (INT_Save)
+}
+
+
 IRQ_TitleMusicSetup:{
 	// setup int for title music
     lda $314
@@ -168,12 +199,31 @@ IRQ_TitleMusicSetup:{
     sta $315
 
 	lda #0
-	sta titleMusic.voice1Ptr
-	sta titleMusic.voice2Ptr
-	sta titleMusic.finished
+	sta voice1Ptr
+	sta voice2Ptr
+	sta finished
 	inc
-	sta titleMusic.voice1Time
-	sta titleMusic.voice2Time
+	sta voice1Time
+	sta voice2Time
+	cli
+	rts
+}
+
+IRQ_GameMusicSetup:{
+	// setup int for title music
+    lda $314
+    sta INT_Save
+    lda $315
+    sta INT_Save+1
+    sei
+    lda #<IRQ_playGameMusic
+    sta $314
+    lda #>IRQ_playGameMusic
+    sta $315
+	lda #0
+	sta voice1Ptr
+	inc
+	sta voice1Time
 	cli
 	rts
 }

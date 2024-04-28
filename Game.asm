@@ -13,15 +13,18 @@ main: {
 	jsr clearScreen
 	jsr setupCharsInVera
 	jsr drawPianoKeys
-
-	jsr titleMusic.IRQ_TitleMusicSetup
+	jsr Music.IRQ_TitleMusicSetup
 
 PlayTitle:
-	lda titleMusic.finished
+	lda Music.finished
 	beq PlayTitle
-	jsr titleMusic.Restore_INT
-	break()
+	jsr Music.Restore_INT
+	//break()
+part2:
+	jsr Music.IRQ_GameMusicSetup
 	
+playGameMusic:
+	bra playGameMusic		//forever	
 	rts
 }
 
@@ -88,4 +91,4 @@ setupCharsInVera:{
 }
 #import "playTitleMusic.asm"
 #import "tuneData.asm"
-#import "pianokeys.asm"
+#import "pianokeysCharSet.asm"
