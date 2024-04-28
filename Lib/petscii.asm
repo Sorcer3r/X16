@@ -1,3 +1,4 @@
+#importonce
 // Constants file
 
 // PETSCII

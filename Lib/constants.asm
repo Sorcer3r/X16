@@ -1,3 +1,4 @@
+#importonce 
 // Constants file
 
 // VERA
@@ -7,7 +8,9 @@
 .const VERADATA0         = $9F23
 .const VERADATA1         = $9F24
 .const VERACTRL	         = $9F25
-.const VERASCANLINE       = $9F28
+.const VERAINTENABLE     = $9F26
+.const VERAINTSTATUS     = $9F27
+.const VERASCANLINE      = $9F28
 .const VERA_DC_video     = $9F29
 .const VERA_DC_hscale    = $9F2A
 .const VERA_DC_vscale    = $9F2B
@@ -29,19 +32,21 @@
 .const VERA_L1_vscrollHi = $9F3A
 
 // VRAM Addresses
-.const VRAM_layer1_map   = $1B000
-.const VRAM_layer0_map   = $00000
-.const VRAM_lowerchars   = $0B000
-.const VRAM_lower_rev    = VRAM_lowerchars + 128*8
-.const SPRITEDATA        = $13000
-.const VRAM_petscii      = $1F000
-.const VRAMPalette       = $1FA00
-.const SPRITEREGBASE     = $1FC00
+.const VRAM_layer1_map  = $1B000
+.const VRAM_layer0_map  = $00000
+.const VRAM_lowerchars  = $0B000
+.const VRAM_lower_rev   = VRAM_lowerchars + 128*8
+.const SPRITEDATA       = $13000
+.const VRAM_petscii     = $1F000
+.const VRAMPalette      = $1FA00
+.const VERASPRITEBASE   = $1FC00
+.const VERAPSG0         = $1f9c0
+.const VERAPSG1         = $1f9c4
 
 // ROM Banks
-.const ROM_BANK          = $01
-.const BASIC_BANK        = 4
-.const CHARSET_BANK      = 6
+.const ROM_BANK         = $01
+.const BASIC_BANK       = 4
+.const CHARSET_BANK     = 6
 
 //DCSCALE Factors
 .const DCSCALEx1 = $80
