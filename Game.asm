@@ -13,13 +13,13 @@ main: {
 	jsr clearScreen
 	jsr setupCharsInVera
 	jsr drawPianoKeys
+	//bra part2
 	jsr Music.IRQ_TitleMusicSetup
 
 PlayTitle:
 	lda Music.finished
 	beq PlayTitle
 	jsr Music.Restore_INT
-	//break()
 part2:
 	jsr Music.IRQ_GameMusicSetup
 	
@@ -34,7 +34,7 @@ setDisplay:{
 	lda #$40			//64 double H,V
 	sta VERA_DC_hscale
 	sta VERA_DC_vscale
-	sta VERA_DC_border
+	sta VERA_DC_border	//black
 	rts
 
 }
@@ -43,7 +43,7 @@ clearScreen:{
 	ldx #30
 	addressRegister(0,VRAM_layer1_map,1,0)
 line:
-	ldy #80		// 40 char+40col
+	ldy #80		// 40 char+40colour
 row:	
 	stz VERADATA0
 	stz VERADATA0
@@ -79,9 +79,9 @@ bottomRow:
 	bne bottomRow	
 	rts
 
-pianoTopRow:
+pianoTopRow:{
 	.byte 1,3,3,2,1,3,2,1,3,3,2,1,3,2,1,3,2,1,3,3,2,1,3,2,1,3,3,2,1,3,2,0
-
+}
 }
 
 setupCharsInVera:{
