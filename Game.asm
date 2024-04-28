@@ -88,4 +88,4 @@ setupCharsInVera:{
 }
 #import "playTitleMusic.asm"
 #import "tuneData.asm"
-#import "pianokeys.asm"
+#import "pianokeysCharSet.asm"

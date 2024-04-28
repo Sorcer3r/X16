@@ -103,208 +103,106 @@ redKeys:{
     .byte $00  
     .byte $00  
 }
-oldblueKeys:{
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $09  
-    .byte $0c  
-    .byte $0c  
-    .byte $06  
-    .byte $0c  
-    .byte $0c  
-    .byte $09  
-    .byte $0c  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $0b  
-    .byte $0d  
-    .byte $0d  
-    .byte $06  
-    .byte $0d  
-    .byte $0d  
-    .byte $0b  
-    .byte $0d  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $09  
-    .byte $0c  
-    .byte $0c  
-    .byte $06  
-    .byte $0c  
-    .byte $0c  
-    .byte $09  
-    .byte $0c  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $0c  
-    .byte $0d  
-    .byte $0d  
-    .byte $0c  
-    .byte $0d  
-    .byte $0d  
-    .byte $0c  
-    .byte $0d  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $0d  
-    .byte $0e  
-    .byte $0e  
-    .byte $0d  
-    .byte $0e  
-    .byte $0e  
-    .byte $0d  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $0d  
-    .byte $0f  
-    .byte $0f  
-    .byte $0d  
-    .byte $0f  
-    .byte $0f  
-    .byte $09  
-    .byte $0b  
-    .byte $0b  
-    .byte $09  
-    .byte $09  
-    .byte $09  
-    .byte $0d  
-    .byte $0d  
-    .byte $09  
-    .byte $00  
-    .byte $09  
-    .byte $09  
-    .byte $0b  
-    .byte $0f  
-    .byte $0b  
-    .byte $10  
-    .byte $0d  
-    .byte $0e  
-    .byte $0c  
-    .byte $0c  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-    .byte $00  
-}
 blueKeys:{
-.byte $00
-.byte $00
-.byte $00
-.byte $00
-.byte $09
-.byte $0c
-.byte $0c
-.byte $06
-.byte $0c
-.byte $0c
-.byte $09
-.byte $0c
-.byte $00
-.byte $00
-.byte $00
-.byte $00
-.byte $0b
-.byte $0d
-.byte $0d
-.byte $06
-.byte $0d
-.byte $0d
-.byte $0b
-.byte $0d
-.byte $00
-.byte $00
-.byte $00
-.byte $00
-.byte $0b
-.byte $0d
-.byte $0d
-.byte $06
-.byte $0d
-.byte $0d
-.byte $0b
-.byte $0d
-.byte $00
-.byte $00
-.byte $00
-.byte $00
-.byte $09
-.byte $0c
-.byte $0c
-.byte $06
-.byte $0c
-.byte $0c
-.byte $09
-.byte $0c
-.byte $00
-.byte $00
-.byte $00
-.byte $00
-.byte $0c
-.byte $0e
-.byte $0e
-.byte $0c
-.byte $0e
-.byte $0e
-.byte $0c
-.byte $0e
-.byte $00
-.byte $00
-.byte $00
-.byte $00
-.byte $0d
-.byte $0f
-.byte $0f
-.byte $0d
-.byte $0f
-.byte $0f
-.byte $0d
-.byte $00
-.byte $00
-.byte $00
-.byte $00
-.byte $00
-.byte $0e
-.byte $10
-.byte $10
-.byte $0e
-.byte $10
-.byte $10
-.byte $09
-.byte $0c
-.byte $0c
-.byte $09
-.byte $00
-.byte $00
-.byte $0d
-.byte $0d
-.byte $09
-.byte $00
-.byte $09
-.byte $00
-.byte $00
-.byte $00
-.byte $00
-.byte $00
-.byte $00
-.byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $09
+    .byte $0c
+    .byte $0c
+    .byte $06
+    .byte $0c
+    .byte $0c
+    .byte $09
+    .byte $0c
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $0b
+    .byte $0d
+    .byte $0d
+    .byte $06
+    .byte $0d
+    .byte $0d
+    .byte $0b
+    .byte $0d
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $0b
+    .byte $0d
+    .byte $0d
+    .byte $06
+    .byte $0d
+    .byte $0d
+    .byte $0b
+    .byte $0d
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $09
+    .byte $0c
+    .byte $0c
+    .byte $06
+    .byte $0c
+    .byte $0c
+    .byte $09
+    .byte $0c
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $0c
+    .byte $0e
+    .byte $0e
+    .byte $0c
+    .byte $0e
+    .byte $0e
+    .byte $0c
+    .byte $0e
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $0d
+    .byte $0f
+    .byte $0f
+    .byte $0d
+    .byte $0f
+    .byte $0f
+    .byte $0d
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $0e
+    .byte $10
+    .byte $10
+    .byte $0e
+    .byte $10
+    .byte $10
+    .byte $09
+    .byte $0c
+    .byte $0c
+    .byte $09
+    .byte $00
+    .byte $00
+    .byte $0d
+    .byte $0d
+    .byte $09
+    .byte $00
+    .byte $09
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
 }
 }
