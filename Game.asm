@@ -12,22 +12,22 @@ main: {
 
     jsr spriteEngine.copyGFXtoVera
 	jsr spriteEngine.buildSpriteAddressTable
-	break()
-	lda #$ff
-	sta HL
-	inc
-	sta DE
-	lda #$08
-	sta HL+1
-	sta DE+1
-	ldx #02
-	//lda (HL,x)
-	lda HL
-	inc
-	sta HL
-	adc HL+1
-	sta HL+1
-	break()
+	// break()
+	// lda #$ff
+	// sta HL
+	// inc
+	// sta DE
+	// lda #$08
+	// sta HL+1
+	// sta DE+1
+	// ldx #02
+	// //lda (HL,x)
+	// lda HL
+	// inc
+	// sta HL
+	// adc HL+1
+	// sta HL+1
+	// break()
 
     lda VERA_DC_video
     ora #SPRITEENABLE
