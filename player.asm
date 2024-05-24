@@ -72,7 +72,7 @@ addTopLoop:
 }
 
 shieldArrayLoad:{
-lda #$19 //topleft image
+lda #$1b //topleft image
 sta game.arrayLoad.imagePtr
 lda #$30
 sta game.arrayLoad.xLo
@@ -234,7 +234,7 @@ addShot:{
     sta game.arrayLoad.xHi
     lda #$cc        //y start pos
     sta game.arrayLoad.yLo
-    lda #$0a        //shot sprite image
+    lda #$0c        //shot sprite image
     sta game.arrayLoad.imagePtr
     lda #$fc  // -4 in y dir
     sta game.arrayLoad.yDelta
@@ -264,7 +264,7 @@ processShot:{
     //clc
     //adc #$04
     //sta SpriteArray.yLo,x
-    lda #$0b        // shot explosion
+    lda #$0d        // shot explosion
     sta SpriteArray.imagePtr,x
     lda #$20
     sta shotallowed

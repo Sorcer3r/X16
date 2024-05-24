@@ -1,9 +1,13 @@
+.cpu _65c02
+#import "zeroPage.asm" 
+#import "invaders8080vars.asm"
+
                 //Reset: 
                 //; Execution begins here on power-up and reset.
                 //0000: 00              NOP                          ; This provides a slot ...
                 //0001: 00              NOP                          ; ... to put in a JP for ...
                 //0002: 00              NOP                          ; ... development
-                //0003: C3 D4 18        JP      init                 ; Continue startup at 18D4
+jmp init        //0003: C3 D4 18        JP      init                 ; Continue startup at 18D4
                 //0006: 00 00      ; Padding before fixed ISR address
                 //
                 //ScanLine96: 
@@ -332,11 +336,16 @@
                 //
                 //CopyRAMMirror:
                 //; Block copy ROM mirror 1B00-1BBF to initialize RAM at 2000-20BF.
-                //;
-                //01E4: 06 C0           LD      B,$C0                ; Number of bytes"
-                //01E6: 11 00 1B        LD      DE,$1B00            ; RAM mirror in ROM"
-                //01E9: 21 00 20        LD      HL,$2000            ; Start of RAM"
-                //01EC: C3 32 1A        JP      BlockCopy           ; Copy [DE]->[HL] and return
+CopyRAMMirror:                //;
+lda #$c0               //01E4: 06 C0           LD      B,$C0                ; Number of bytes"
+CopyRAMMirrorB:
+sta BC+1
+                 //01E6: 11 00 1B        LD      DE,$1B00            ; RAM mirror in ROM"
+lda #<gamevars8080.waitOnDraw                //01E9: 21 00 20        LD      HL,$2000            ; Start of RAM"
+sta HL
+lda #>gamevars8080.waitOnDraw
+sta HL+1
+jmp BlockCopy                //01EC: C3 32 1A        JP      BlockCopy           ; Copy [DE]->[HL] and return
                 //Copy/Restore Shields
                 //DrawShieldPl1:
                 //; Draw the shields for player 1 (draws it in the buffer in the player's data area).
@@ -1795,7 +1804,7 @@
                 //0AE7: C3 32 1A        JP      BlockCopy           ; Block copy DE to descriptor
                 //
                 //;=============================================================
-                //; After initialization ... splash screens
+afterIniSplash:                //; After initialization ... splash screens
                 //0AEA: AF              XOR     A                    ; Make a 0
                 //0AEB: D3 03           OUT     (SOUND1),A          ; Turn off sound"
                 //0AED: D3 05           OUT     (SOUND2),A          ; Turn off sound"
@@ -3584,14 +3593,14 @@
                 //; Initializiation comes here
                 //;
                 //init:
-                //18D4: 31 00 24        LD      SP,$2400            ; Set stack pointer just below screen"
-                //18D7: 06 00           LD      B,$00                ; Count 256 bytes"
-                //18D9: CD E6 01        CALL    $01E6                ; Copy ROM to RAM
+init:               //18D4: 31 00 24        LD      SP,$2400            ; Set stack pointer just below screen"
+stz BC             //18D7: 06 00           LD      B,$00                ; Count 256 bytes"
+jsr CopyRAMMirrorB               //18D9: CD E6 01        CALL    $01E6                ; Copy ROM to RAM
                 //18DC: CD 56 19        CALL    DrawStatus          ; Print scores and credits
                 //;
-                //18DF: 3E 08           LD      A,$08                ; Set alien ..."
-                //18E1: 32 CF 20        LD      (aShotReloadRate),A ; ... shot reload rate"
-                //18E4: C3 EA 0A        JP      $0AEA                ; Top of splash screen loop
+lda #$08                //18DF: 3E 08           LD      A,$08                ; Set alien ..."
+sta gamevars8080.aShotReloadRate               //18E1: 32 CF 20        LD      (aShotReloadRate),A ; ... shot reload rate"
+jmp afterIniSplash                //18E4: C3 EA 0A        JP      $0AEA                ; Top of splash screen loop
                 //
                 //; Get player-alive flag for OTHER player
                 //18E7: 3A 67 20        LD      A,(playerDataMSB)   ; Player data MSB"
@@ -3837,15 +3846,21 @@
                 //1A21: 34 2E 27 22 1C 18 15 13 10 0E 0D 0C 0B 09 07 05     
                 //1A31: FF   ; ** Needless terminator. The list value ""1" catches everything."
                 //
-                //BlockCopy:
+BlockCopy:                //BlockCopy:
                 //; Copy from [DE] to [HL] (b bytes)
-                //1A32: 1A              LD      A,(DE)              ; Copy from [DE] to ..."
-                //1A33: 77              LD      (HL),A              ; ... [HL]"
-                //1A34: 23              INC     HL                   ; Next destination
-                //1A35: 13              INC     DE                   ; Next source
-                //1A36: 05              DEC     B                    ; Count in B
-                //1A37: C2 32 1A        JP      NZ,BlockCopy        ; Do all"
-                //1A3A: C9              RET                          ; Done
+lda (DE)                //1A32: 1A              LD      A,(DE)              ; Copy from [DE] to ..."
+sta (HL)                //1A33: 77              LD      (HL),A              ; ... [HL]"
+inc HL                //1A34: 23              INC     HL                   ; Next destination
+bne !+
+inc HL+1
+!:
+inc DE                //1A35: 13              INC     DE                   ; Next source
+bne !+
+inc DE+1
+!:
+dec BC+1                //1A36: 05              DEC     B                    ; Count in B
+bne BlockCopy                //1A37: C2 32 1A        JP      NZ,BlockCopy        ; Do all"
+rts                //1A3A: C9              RET                          ; Done
                 //
                 //ReadDesc:
                 //; Load 5 bytes sprite descriptor from [HL]
@@ -3986,23 +4001,22 @@
                 //;-------------------------- RAM initialization -----------------------------
                 //; Coppied to RAM (2000) C0 bytes as initialization.
                 //; See the description of RAM at the top of this file for the details on this data.
-                //
-                //1B00: 01 00 00 10 00 00 00 00 02 78 38 78 38 00 F8 00
-                //1B10: 00 80 00 8E 02 FF 05 0C 60 1C 20 30 10 01 00 00   
-                //1B20: 00 00 00 BB 03 00 10 90 1C 28 30 01 04 00 FF FF   
-                //1B30: 00 00 02 76 04 00 00 00 00 00 04 EE 1C 00 00 03    
-                //1B40: 00 00 00 B6 04 00 00 01 00 1D 04 E2 1C 00 00 03 
-                //1B50: 00 00 00 82 06 00 00 01 06 1D 04 D0 1C 00 00 03
-                //1B60: FF 00 C0 1C 00 00 10 21 01 00 30 00 12 00 00 00         
+InitializationDATA:                //
+.byte  $01, $00, $00, $10, $00, $00, $00, $00, $02, $78, $38, $78, $38, $00, $F8, $00               //1B00: 01 00 00 10 00 00 00 00 02 78 38 78 38 00 F8 00
+.byte  $00, $80, $00, $8E, $02, $FF, $05, $0C, $60, $1C, $20, $30, $10, $01, $00, $00              //1B10: 00 80 00 8E 02 FF 05 0C 60 1C 20 30 10 01 00 00   
+.byte  $00, $00, $00, $BB, $03, $00, $10, $90, $1C, $28, $30, $01, $04, $00, $FF, $FF              //1B20: 00 00 00 BB 03 00 10 90 1C 28 30 01 04 00 FF FF   
+.byte  $00, $00, $02, $76, $04, $00, $00, $00, $00, $00, $04, $EE, $1C, $00, $00, $03               //1B30: 00 00 02 76 04 00 00 00 00 00 04 EE 1C 00 00 03    
+.byte  $00, $00, $00, $B6, $04, $00, $00, $01, $00, $1D, $04, $E2, $1C, $00, $00, $03              //1B40: 00 00 00 B6 04 00 00 01 00 1D 04 E2 1C 00 00 03 
+.byte  $00, $00, $00, $82, $06, $00, $00, $01, $06, $1D, $04, $D0, $1C, $00, $00, $03              //1B50: 00 00 00 82 06 00 00 01 06 1D 04 D0 1C 00 00 03
+.byte  $FF, $00, $C0, $1C, $00, $00, $10, $21, $01, $00, $30, $00, $12, $00, $00, $00              //1B60: FF 00 C0 1C 00 00 10 21 01 00 30 00 12 00 00 00         
                 //
                 //; These don't need to be copied over to RAM (see 1BA0 below).
                 //MesssageP1:
                 //; ""PLAY PLAYER<1>"""
-                //1B70: 0F 0B 00 18 26 0F 0B 00 18 04 11 24 1B 25 FC 
-                //1B7F: 00 
+.byte  $0F, $0B, $00, $18, $26, $0F, $0B, $00, $18, $04, $11, $24, $1B, $25, $FC, $00              //1B70: 0F 0B 00 18 26 0F 0B 00 18 04 11 24 1B 25 FC 00
                 //
-                //1B80: 01 FF FF 00 00 00 20 64 1D D0 29 18 02 54 1D 00                
-                //1B90: 08 00 06 00 00 01 40 00 01 00 00 10 9E 00 20 1C                                   
+.byte  $01, $FF, $FF, $00, $00, $00, $20, $64, $1D, $D0, $29, $18, $02, $54, $1D, $00              //1B80: 01 FF FF 00 00 00 20 64 1D D0 29 18 02 54 1D 00                
+.byte  $08, $00, $06, $00, $00, $01, $40, $00, $01, $00, $00, $10, $9E, $00, $20, $1C              //1B90: 08 00 06 00 00 01 40 00 01 00 00 10 9E 00 20 1C                                   
                 // 
                 //; These don't need to be copied over to RAM I believe this to be a mistake. The constant at 01E4 is C0,"
                 //; which is the size of this mirror with the added sprite. It should be A0. I believe there was a macro
@@ -4027,14 +4041,14 @@
                 //; *.****..
                 //; .*.**...
                 //; ........
-                //1BA0: 00 03 04 78 14 13 08 1A 3D 68 FC FC 68 3D 1A 00                                      
+.byte  $00, $03, $04, $78, $14, $13, $08, $1A, $3D, $68, $FC, $FC, $68, $3D, $1A, $00               //1BA0: 00 03 04 78 14 13 08 1A 3D 68 FC FC 68 3D 1A 00                                      
                 //
-                //1BB0: 00 00 01 B8 98 A0 1B 10 FF 00 A0 1B 00 00 00 00                                      
+.byte  $00, $00, $01, $B8, $98, $A0, $1B, $10, $FF, $00, $A0, $1B, $00, $00, $00, $00              //1BB0: 00 00 01 B8 98 A0 1B 10 FF 00 A0 1B 00 00 00 00                                      
                 //;--------------------------- End of initialization copy -------------------------
                 //
                 //
                 //; Shot descriptor for splash shooting the extra ""C"""
-                //1BC0: 00 10 00 0E 05 00 00 00 00 00 07 D0 1C C8 9B 03
+.byte $00, $10, $00, $0E, $05, $00, $00, $00, $00, $00, $07, $D0, $1C, $C8, $9B, $03               //1BC0: 00 10 00 0E 05 00 00 00 00 00 07 D0 1C C8 9B 03
                 //AlienSprCYB:
                 //; Alien sprite C pulling upside down Y. Note the difference between this and the first picutre
                 //; above. The Y is closer to the ship. This gives the effect of the Y kind of ""sticking" in the"
@@ -4056,11 +4070,11 @@
                 //; *..**...
                 //; ........
                 //;
-                //1BD0: 00 00 03 04 78 14 0B 19 3A 6D FA FA 6D 3A 19 00                                      
+.byte  $00, $00, $03, $04, $78, $14, $0B, $19, $3A, $6D, $FA, $FA, $6D, $3A, $19, $00               //1BD0: 00 00 03 04 78 14 0B 19 3A 6D FA FA 6D 3A 19 00                                      
                 //
                 //; More RAM initialization copied by 18D9
-                //1BE0: 00 00 00 00 00 00 00 00 00 01 00 00 01 74 1F 00                                      
-                //1BF0: 80 00 00 00 00 00 1C 2F 00 00 1C 27 00 00 1C 39 
+.byte  $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $00, $00, $01, $74, $1F, $00              //1BE0: 00 00 00 00 00 00 00 00 00 01 00 00 01 74 1F 00                                      
+.byte  $80, $00, $00, $00, $00, $00, $1C, $2F, $00, $00, $1C, $27, $00, $00, $1C, $39               //1BF0: 80 00 00 00 00 00 1C 2F 00 00 1C 27 00 00 1C 39 
                 //
                 //AlienSprA:
                 //Alien Images

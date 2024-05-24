@@ -181,21 +181,3 @@ shotSprite_14:
 .byte $00,$11,$11,$10
 .byte $01,$01,$11,$00
 .byte $00,$10,$10,$10
-
-shotSpriteColourPallet:
-.byte $00, $00
-.byte $ff, $0f
-.byte $00, $08
-.byte $FE, $0A
-.byte $4C, $0C
-.byte $C5, $00
-.byte $0A, $00
-.byte $E7, $0E
-.byte $85, $0D
-.byte $40, $06
-.byte $77, $0F
-.byte $33, $03
-.byte $77, $07
-.byte $F6, $0A
-.byte $8F, $00
-.byte $BB, $0B

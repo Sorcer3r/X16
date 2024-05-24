@@ -1,5 +1,6 @@
 #importonce
 
+.align $100
 gamevars8080:{
 waitOnDraw:	        .byte	0	//2000 Cleared by alien-draw and set by next-alien. This ensures no alien gets missed while drawing.
             	    .byte	0	//2001 
@@ -157,7 +158,7 @@ soundPort5:	        .byte	0	//2098 Current status of sound port (out $05)
 extraHold:	        .byte	0	//2099 Duration counter for extra-ship sound
 tilt:	            .byte	0	//209A 1 if tilt handling is in progress
 fleetSndHold:	    .byte	0	//209B Time to hold fleet-sound at each change
-                                //209C-20BF unused bytes went here
+                    .fill $24,0 //209C-20BF unused bytes went here
 isrDelay:	        .byte	0	//20C0 Delay counter decremented in ISR
 isrSplashTask:	    .byte	0	//20C1 1=In demo, 2=Little-alien and Y, 4=shooting extra 'C'"
 splashAnForm:	    .byte	0	//20C2 Image form (increments each draw)
@@ -174,7 +175,7 @@ splashImRestLSB:	.byte	0	//20CC Base image for restore 1BA0 is small alien with 
 splashImRestMSB:	.byte	0	//20CD 
 twoPlayers:	        .byte	0	//20CE 1 for yes, 0 means 1 player"
 aShotReloadRate:	.byte	0	//20CF Based on the MSB of the player's score ... how fast the aliens reload their shots
-                                //20D0 - 20E4 ; This is where the alien-sprite-carying-the-Y ...
+                    .fill $15,0 //20D0 - 20E4 ; This is where the alien-sprite-carying-the-Y ...
                                 // ; ... lives in ROM ???
 player1Ex:	        .byte	0	//20E5 Extra ship has been awarded = 0
 player2Ex:      	.byte	0	//20E6 Extra ship has been awarded = 0
@@ -204,9 +205,9 @@ P2ScorM:	        .byte	0	//20FD Hi-score descriptor ... value MSB
 P2ScorLoL:	        .byte	0	//20FE Hi-score descriptor ... location LSB
 P2ScorLoM:	        .byte	0	//20FF Hi-score descriptor ... location MSB
 
-                                //Player 1 specific data 
+.align $100                     //Player 1 specific data 
                                 // 
-P1Data:             .fill $fa,0 //2100:2136 Player 1 alien ship indicators (0=dead) 11*5 = 55
+P1Data:             .fill $fb,0 //2100:2136 Player 1 alien ship indicators (0=dead) 11*5 = 55
                                 //2137:2141 Unused 11 bytes (room for another row of aliens?)
                                 //2142:21F1 Player 1 shields remembered between rounds 44 bytes * 4 shields ($B0 bytes)
                                 //21F2:21FA Unused 9 bytes
@@ -216,9 +217,9 @@ p1RefAlienX:	    .byte	0	//21FD Player 1 reference-alien X coordiante
 p1RackCnt:	        .byte	0	//21FE Player 1 rack-count (starts at 0 but get incremented to 1-8)
 p1ShipsRem:	        .byte	0	//21FF Ships remaining after current dies
 
-                                //Player 2 specific data 
+//.align $100                     //Player 2 specific data 
                                 // 
-P2Data:             .fill $fa,0 //2200:2236 Player 2 alien ship indicators (0=dead) 11*5 = 55
+P2Data:             .fill $fb,0 //2200:2236 Player 2 alien ship indicators (0=dead) 11*5 = 55
                                 //2237:2241 Unused 11 bytes (room for another row of aliens?)
                                 //2242:22F1 Player 2 shields remembered between rounds 44 bytes * 4 shields ($B0 bytes)
                                 //22F2:22FA Unused 9 bytes

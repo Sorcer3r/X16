@@ -15,7 +15,7 @@ initialiseInvaders:{
     sta setInvaderBasics.setXlo
     lda #$78 // 120 
     sta setInvaderBasics.setYlo
-    lda #$04
+    lda #$04 // 0a 0b is invader with upside Y
     sta setInvaderBasics.setType
     lda #$00
     sta setInvaderBasics.setXhi

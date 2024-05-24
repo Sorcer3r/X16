@@ -266,11 +266,11 @@ exit:
     rts
 }
 
-copyGFXtoVera:{             // -$20 because files includes pallete data we dont need
-    copyDataToVera(spriteFiles.spriteAliens,SPRITEALIENBASE,spriteFiles._spriteAliens - spriteFiles.spriteAliens - $20)
-    copyDataToVera(spriteFiles.spriteShots,SPRITESHOTBASE,spriteFiles._spriteShots - spriteFiles.spriteShots - $20)
-    copyDataToVera(spriteFiles.spriteShieldbase,SPRITESHIELDBASE,spriteFiles._spriteShieldbase - spriteFiles.spriteShieldbase - $20)
-    copyDataToVera(spriteFiles.spriteSpaceship,SPRITESPACESHIPBASE,spriteFiles._spriteSpaceship - spriteFiles.spriteSpaceship - $20)
+copyGFXtoVera:{             // removed pallete - so no-$20 because files includes pallete data we dont need
+    copyDataToVera(spriteFiles.spriteAliens,SPRITEALIENBASE,spriteFiles._spriteAliens - spriteFiles.spriteAliens)
+    copyDataToVera(spriteFiles.spriteShots,SPRITESHOTBASE,spriteFiles._spriteShots - spriteFiles.spriteShots)
+    copyDataToVera(spriteFiles.spriteShieldbase,SPRITESHIELDBASE,spriteFiles._spriteShieldbase - spriteFiles.spriteShieldbase)
+    copyDataToVera(spriteFiles.spriteSpaceship,SPRITESPACESHIPBASE,spriteFiles._spriteSpaceship - spriteFiles.spriteSpaceship)
     copyDataToVera(spriteFiles.tileSet,VRAM_lowerchars,64*8)
     rts
 }
@@ -284,7 +284,7 @@ buildSpriteAddressTable:{
 	// aliens
 	lda #2			//16*8
 	sta spriteStep
-	ldx #$0a	// 10 of these
+	ldx #$0c	// 12 of these
 	jsr fillArray
 	// shots
 	// y and pointers continue
@@ -359,7 +359,7 @@ spriteFiles:{
 // sprite data sets#import "SpriteArray.asm"
 
 spriteAliens:
-#import "sprites 10 16x8(64).asm"
+#import "sprites 12 16x8(64).asm"
 _spriteAliens:
 
 spriteShots:

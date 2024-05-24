@@ -1,7 +1,6 @@
 #importonce 
-
-
-.label HL = $0004
+    
+.label HL = $0004       // little endian!
 .label DE = $0006
 .label BC = $0008
 .label PTR1 = $000A

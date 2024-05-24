@@ -4,8 +4,8 @@
 #import "screen.asm"
 #import "player.asm"
 #import "gameVars.asm"
-//#import "invaders8080vars.asm"
-//#import "invaders8080code.asm"
+#import "invaders8080vars.asm"
+#import "invaders8080code.asm"
 
 *=$0801
 	BasicUpstart2(main)
