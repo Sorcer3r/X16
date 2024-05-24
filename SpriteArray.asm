@@ -41,7 +41,7 @@ SpriteArray:
     speedyCtrl:  .fill TOTALSPRITES,0  // do move when speedyTicks = speedyCtrl. reset speedyTicks
     frameCtrl:  .fill TOTALSPRITES,0   // when frameTicks = frameCtrl, change frame number(Status). numFrames(7:6) determines sequence.  reset frameTicks
     numFrames:  .fill TOTALSPRITES,0    // bit 7: normal(0)/reversing(1). bit 6  current direction up(0) down(1) 5:0 Number of frames for this sprite
-
+    updateReqd: .fill TOTALSPRITES,0    // non zero means sprite needs to update
     // address table contains location of spriteimage in VERA space
     // as per reg 0 and 1 of each VERA sprite
     // *** if all sprites are same size/depth then can be calculated instead***

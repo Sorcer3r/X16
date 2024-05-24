@@ -4,14 +4,15 @@
 // sprite 0, Width : 8, Height : 8, Colour Depth : 16
 
 shotSprite_0:
-.byte $00,$00,$00,$00
-.byte $00,$00,$00,$00
-.byte $00,$00,$00,$00
-.byte $00,$00,$00,$00
 .byte $00,$01,$00,$00
 .byte $00,$01,$00,$00
 .byte $00,$01,$00,$00
 .byte $00,$01,$00,$00
+.byte $00,$00,$00,$00
+.byte $00,$00,$00,$00
+.byte $00,$00,$00,$00
+.byte $00,$00,$00,$00
+
 
 // sprite 1, Width : 8, Height : 8, Colour Depth : 16
 

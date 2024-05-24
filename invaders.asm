@@ -30,14 +30,12 @@ initialiseInvaders:{
 // build 11*5 array 1st row is lowest
 add1Invader:{
     jsr setInvaderBasics
-    jsr spriteEngine.insertIntoArray        // returns slot used in y
-    cpy #SpriteArray.TOTALSPRITES
-    beq exit
-    ldx invaderArrayIndex
-    tya
-    inc
-    sta invaderArray,x      //array value is sprite#+1
     inc invadersLiving
+    ldy invadersLiving
+    jsr spriteEngine.insertIntoArray        // returns slot used in y
+    ldx invaderArrayIndex
+    lda invadersLiving
+    sta invaderArray,x      //array value is sprite#
     inc invaderArrayIndex
     inc invaderArrayX
     lda invaderArrayX
@@ -57,8 +55,8 @@ nextRow:
     lda #$30  // 28
     sta setInvaderBasics.setXlo
     lda setInvaderBasics.setYlo
-    clc
-    sbc #12     // 16 y shiftr row
+    sec
+    sbc #12     // 12 y shiftr row
     sta setInvaderBasics.setYlo
     inc invaderArrayY
     ldy invaderArrayY
@@ -79,7 +77,7 @@ lda setXhi: #$00
 sta game.arrayLoad.xHi
 lda setYlo: #$00
 sta game.arrayLoad.yLo
-lda #$0c  //12
+lda #$bc  // collision mask 1011xxxx, xxxx1100 zdepth 3
 sta game.arrayLoad.ATTR1
 lda #$10
 sta game.arrayLoad.ATTR2
@@ -103,7 +101,6 @@ setStopDrop:{
 setStop:
     lda invaderArray,y
     beq next
-    dec
     tax
     stz SpriteArray.yDelta,x    //zero Y delta
     lda newXdelta: #$00 
@@ -118,13 +115,11 @@ next:
 
 setStartDrop:{
     ldy #$00
+    //break()
 setStart:
     lda invaderArray,y
     beq next
-    dec
     tax
-    lda SpriteArray.xDelta,x
-    sta setStopDrop.newXdelta
     stz SpriteArray.xDelta,x    //zero x delta
     lda #8 
     sta SpriteArray.yDelta,x    // set Y delta
@@ -134,41 +129,40 @@ next:
     bne setStart
     lda #0
     sec
-    sbc setStopDrop.newXdelta
+    sbc oldDeltaX: #$04
+    sta oldDeltaX
     sta setStopDrop.newXdelta
     rts
 }
 
 findInvader:{
-	lda invadersLiving
-	clc
-	beq exit		// no living invaders
-	ldx invaderArrayIndex
+	ldy invaderArrayIndex
 findInv1:
-	lda invaderArray,x
-	bne alive	
-	inc invaderArrayIndex
-	ldx invaderArrayIndex
-	cpx #55
+	lda invaderArray,y
+	bne alive
+    iny	
+//	cpy #56
 	bne findInv1
-	ldx #$00
-	stx invaderArrayIndex
-	bra findInv1
-alive:	
-	dec
-	tax
-	sec
-exit:	
+alive:
+    iny
+	sty invaderArrayIndex
+	tax	
 	rts
 }
 
 invaderArray:       .fill 55,0
+invaderArrayEnd:    .byte $ff
 invadersLiving:     .byte 0
 invaderArrayIndex:  .byte 0 
 invaderArrayX:      .byte 0
 invaderArrayY:      .byte 0
 invadersFalling:    .byte 0
 livingCycle:        .byte 0
+currentInvader:     .byte 0
+collisionType:      .byte 0
+dyingInvaderSpriteRef: .byte 0
+dyingInvaderArrayRef: .byte 0
+deathTimer:         .byte 0
 invaderYSprite:     .byte 4,4,2,2,0
 
 }

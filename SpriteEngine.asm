@@ -9,6 +9,58 @@
 
 spriteEngine:{
 
+updateVera:{
+    addressRegister(0,VERASPRITEBASE,1,0)
+    ldx #1
+processSprite:
+    lda SpriteArray.status,x
+    tay
+    bpl processThis
+    lda SpriteArray.updateReqd,x
+    bne processThis
+    lda VERADATA0
+    lda VERADATA0
+    lda VERADATA0
+    lda VERADATA0
+    lda VERADATA0
+    lda VERADATA0
+    stz VERADATA0       //clear collision mask
+    lda VERADATA0
+    bra nextSprite
+processThis:
+    stz SpriteArray.updateReqd,x 
+    tya 
+    clc
+    adc SpriteArray.imagePtr,x
+    tay
+    lda SpriteArray.addressTableLo,y
+    sta VERADATA0
+    lda SpriteArray.addressTableHi,y
+    sta VERADATA0
+    lda SpriteArray.xLo,x
+    sta VERADATA0
+    lda SpriteArray.xHi,x
+    sta VERADATA0
+    lda SpriteArray.yLo,x
+    sta VERADATA0
+    lda SpriteArray.yHi,x
+    sta VERADATA0
+    lda SpriteArray.ATTR1,x
+    sta VERADATA0
+    lda SpriteArray.ATTR2,x
+    sta VERADATA0
+nextSprite:
+    inx
+    cpx #SpriteArray.TOTALSPRITES
+    bne processSprite
+    // lda VERAINTENABLE
+    // and #$7f  // clear bit 8 (line int)
+    // sta VERAINTENABLE
+    // lda #$01
+    // sta $ff     // vsync semaphore flag to rest of code.
+    rts
+}
+
 processSprites:{
     ldx #0
 process:     
@@ -22,10 +74,13 @@ exit:
 }
 
 process1Sprite:{
+    lda SpriteArray.updateReqd,x
+    bne spriteActive 
     lda SpriteArray.status,x
     bpl spriteActive
     jmp exit
-spriteActive:        
+spriteActive:
+    inc SpriteArray.updateReqd,x    //set update flag       
     inc SpriteArray.speedxTicks,x
     inc SpriteArray.speedyTicks,x
     inc SpriteArray.frameTicks,x
@@ -63,21 +118,27 @@ checkDeltaY:
     stz SpriteArray.speedyTicks,x
     lda SpriteArray.yDelta,x
     beq noyMove
+
+    cpx #$3d
+    beq skipbreak
+    //break()
+
+    skipbreak:
 // add yDelta to y
 	lda SpriteArray.yLo,x
     clc
 	adc SpriteArray.yDelta,x
 	sta SpriteArray.yLo,x
-	lda SpriteArray.yDelta,x
-	ldy #0
-	dec
-	bpl addyDeltaHi
-	dey
-addyDeltaHi:
-	sty signyExtend 
-	lda SpriteArray.yHi,x
-	adc signyExtend: #00
-	sta SpriteArray.yHi,x
+// 	lda SpriteArray.yDelta,x   //not needed since Y max is 240
+// 	ldy #0
+// 	dec
+// 	bpl addyDeltaHi
+// 	dey
+// addyDeltaHi:
+// 	sty signyExtend 
+// 	lda SpriteArray.yHi,x
+// 	adc signyExtend: #00
+// 	sta SpriteArray.yHi,x
 
 noyMove:        // do frame change checks
     lda SpriteArray.frameCtrl,x
@@ -175,7 +236,7 @@ checkNext:
 }
 
 testXLimit:{        // carry set if hit an edge
-        ldx #0
+    ldx #0
 checkActive:    
     lda SpriteArray.status,x
     bmi checkNext
@@ -198,7 +259,7 @@ checkLeft:
     bcs exit
 checkNext:
     inx
-    cmp #SpriteArray.TOTALSPRITES
+    cpx #SpriteArray.TOTALSPRITES
     bne checkActive
     clc
 exit:
@@ -252,11 +313,11 @@ fillArray:
 	rts
 }
 
-insertIntoArray:{
+insertIntoArray:{       // spritearray # in y
     //.label arrayAddr = $22 
-    jsr findArraySlot       //in y
-    cpy #SpriteArray.TOTALSPRITES
-    beq exit    // no room at the inn, not added
+    //jsr findArraySlot       //in y
+    //cpy #SpriteArray.TOTALSPRITES
+    //beq exit    // no room at the inn, not added
     lda #<SpriteArray.status
     sta arrayAddr
     lda #>SpriteArray.status
@@ -292,7 +353,8 @@ foundSlot:
     rts
 }
 
-*=$6000 "Sprite Data files"
+.align $1000
+*=*  "Sprite Data files"  //$6000
 spriteFiles:{
 // sprite data sets#import "SpriteArray.asm"
 

@@ -1,17 +1,21 @@
 #importonce
+
 // macro files
 #import "constants.asm"
 .label veraAddr = $0100  //: .byte 0,0,0,0
 
-.macro skip1Byte() {  // 2 byte nop 65c02
-    .byte $42
+// 2 byte nop 65c02
+.macro skip1Byte() {  
+    .byte $24  // $42 etc dont work in emulator
 }
 
-.macro skip2Bytes() {  // 3 byte nop 65c02
-    .byte  $DC
+// 3 byte nop 65c02
+.macro skip2Bytes() {  
+    .byte  $2c  // $dc and $fc dont work in emulater
 }
 
-.macro break(){         // 65c02 STP
+// 65c02 STP
+.macro break(){         
     .byte $db
 }
 
