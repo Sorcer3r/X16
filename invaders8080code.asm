@@ -1907,8 +1907,8 @@ continueSplash:
                 //0B47: CD B6 0A        CALL    TwoSecDelay         ; Two second delay
                 //;
 playDemo:                //; Play demo
-                //0B4A: CD D6 09        CALL    ClearPlayField      ; Clear playfield
-                //0B4D: 3A FF 21        LD      A,(p1ShipsRem)      ; Number of ships for player-1"
+break()               //0B4A: CD D6 09        CALL    ClearPlayField      ; Clear playfield
+lda 'd'                //0B4D: 3A FF 21        LD      A,(p1ShipsRem)      ; Number of ships for player-1"
                 //0B50: A7              AND     A                    ; If non zero ...
                 //0B51: C2 5D 0B        JP      NZ,$0B5D            ; ... keep it (counts down between demos)"
                 //0B54: CD D1 08        CALL    GetShipsPerCred     ; Get number of ships from DIP settings
