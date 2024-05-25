@@ -1,8 +1,13 @@
 .cpu _65c02
+#importonce 
+
 #import "zeroPage.asm" 
 #import "invaders8080vars.asm"
+#import "Lib\macro.asm"
+#import "screen.asm"
 
-                //Reset: 
+inv8080:{
+reset:                //Reset: 
                 //; Execution begins here on power-up and reset.
                 //0000: 00              NOP                          ; This provides a slot ...
                 //0001: 00              NOP                          ; ... to put in a JP for ...
@@ -10,104 +15,146 @@
 jmp init        //0003: C3 D4 18        JP      init                 ; Continue startup at 18D4
                 //0006: 00 00      ; Padding before fixed ISR address
                 //
-                //ScanLine96: 
+                //ScanLine96:
+ScanLine96:     //called by my int handler that deals with colours. backup zp regs?                 
+                 // half way there (line 224) = 112pixels    
                 //;Interrupt brings us here when the beam is *near* the middle of the screen. The real middle
                 //;would be 224/2 = 112. The code pretends this interrupt happens at line 128.
                 //0008: F5              PUSH    AF                   ; Save ...
-                //0009: C5              PUSH    BC                   ; ...
-                //000A: D5              PUSH    DE                   ; ...
-                //000B: E5              PUSH    HL                   ; ... everything
-                //000C: C3 8C 00        JP      $008C                ; Continue ISR at 8C
+lda BC                //0009: C5              PUSH    BC                   ; ...
+sta BCstack
+lda BC+1
+sta BCstack+1
+lda DE                //000A: D5              PUSH    DE                   ; ...
+sta DEstack
+lda DE+1
+sta DEstack+1
+lda HL                //000B: E5              PUSH    HL                   ; ... everything
+sta HLstack
+lda HL+1
+sta HLstack+1
+                //000C: C3 8C 00        JP      $008C                ; Continue ISR at 8C (this was for space before #10)
+                //
+                //; Continues here at scanline 96
+                //;
+                //008C: AF              XOR     A                    ; Flag that tells ...
+stz gamevars8080.vblankStatus                //008D: 32 72 20        LD      (vblankStatus),A    ; ... objects on the upper half of screen to draw/move"
+lda gamevars8080.suspendPlay                //0090: 3A E9 20        LD      A,(suspendPlay)     ; Are we moving ..."
+                //0093: A7              AND     A                    ; ... game objects?
+beq isrExit                //0094: CA 82 00        JP      Z,$0082             ; No ... restore and return"
+lda gamevars8080.gameMode                //0097: 3A EF 20        LD      A,(gameMode)        ; Are we in ..."
+                //009A: A7              AND     A                    ; ... game mode?
+bne processObjects                //009B: C2 A5 00        JP      NZ,$00A5            ; Yes .... process game objects and out"
+lda gamevars8080.isrSplashTask                //009E: 3A C1 20        LD      A,(isrSplashTask)   ; Splash-animation tasks"
+ror                //00A1: 0F              RRCA                         ; If we are in demo-mode then we'll process the tasks anyway
+bcc isrExit                //00A2: D2 82 00        JP      NC,$0082            ; Not in demo mode ... done"
+                //;
+processObjects:                
+lda #$20                //00A5: 21 20 20        LD      HL,$2020            ; Game object table (skip player-object at 2010)"
+sta HL
+sta HL+1
+jsr RunGameObjs1                //00A8: CD 4B 02        CALL    $024B                ; Process all game objects (except player object)
+jsr CursorNextAlien                //00AB: CD 41 01        CALL    CursorNextAlien     ; Advance cursor to next alien (move the alien if it is last one)
+bra isrExit                //00AE: C3 82 00        JP      $0082                ; Restore and return
+
+
                 //000F: 00         ; Padding before fixed ISR address
                 //
                 //ScanLine224:
-                //; Interrupt brings us here when the beam is at the end of the screen (line 224) when the VBLANK begins.
+ScanLine224:    //called by my int handler for colours. backup zp regs? 
+                // vblank 
+               //; Interrupt brings us here when the beam is at the end of the screen (line 224) when the VBLANK begins.
                 //0010: F5              PUSH    AF                   ; Save ...
-                //0011: C5              PUSH    BC                   ; ...
-                //0012: D5              PUSH    DE                   ; ...
-                //0013: E5              PUSH    HL                   ; ... everything
-                //0014: 3E 80           LD      A,$80                ; Flag that tells objects ..."
-                //0016: 32 72 20        LD      (vblankStatus),A    ; ... on the lower half of the screen to draw/move"
-                //0019: 21 C0 20        LD      HL,isrDelay         ; Decrement ..."
-                //001C: 35              DEC     (HL)                 ; ... the general countdown (used for pauses)
+lda BC                //0011: C5              PUSH    BC                   ; ...
+sta BCstack
+lda BC+1
+sta BCstack+1
+lda DE                //0012: D5              PUSH    DE                   ; ...
+sta DEstack
+lda DE+1
+sta DEstack+1
+lda HL                //0013: E5              PUSH    HL                   ; ... everything
+sta HLstack
+lda HL+1
+sta HLstack+1
+lda #$80                //0014: 3E 80           LD      A,$80                ; Flag that tells objects ..."
+sta gamevars8080.vblankStatus                //0016: 32 72 20        LD      (vblankStatus),A    ; ... on the lower half of the screen to draw/move"
+dec gamevars8080.isrDelay                    //0019: 21 C0 20        LD      HL,isrDelay         ; Decrement ..."
+                                            //dec (hl)
                 //001D: CD CD 17        CALL    CheckHandleTilt     ; Check and handle TILT
                 //0020: DB 01           IN      A,(INP1)            ; Read coin switch"
                 //0022: 0F              RRCA                         ; Has a coin been deposited (bit 0)?
                 //0023: DA 67 00        JP      C,$0067             ; Yes ... note that switch is closed and continue at 3F with A=1"
                 //0026: 3A EA 20        LD      A,(coinSwitch)      ; Switch is now open. Was it ..."
                 //0029: A7              AND     A                    ; ... closed last time?
-                //002A: CA 42 00        JP      Z,$0042             ; No ... skip registering the credit"
+ bra noCoinDeposit               //002A: CA 42 00        JP      Z,$0042             ; No ... skip registering the credit"
                 //;
                 //; Handle bumping credit count
-                //002D: 3A EB 20        LD      A,(numCoins)        ; Number of credits in BCD"
-                //0030: FE 99           CP      $99                  ; 99 credits already?
-                //0032: CA 3E 00        JP      Z,$003E             ; Yes ... ignore this (better than rolling over to 00)"
-                //0035: C6 01           ADD     A,$01                ; Bump number of credits"
+lda gamevars8080.numCoins                //002D: 3A EB 20        LD      A,(numCoins)        ; Number of credits in BCD"
+cmp #$99                //0030: FE 99           CP      $99                  ; 99 credits already?
+beq maxCoins                //0032: CA 3E 00        JP      Z,$003E             ; Yes ... ignore this (better than rolling over to 00)"
+sed                //0035: C6 01           ADD     A,$01                ; Bump number of credits"
+inc
+cld
                 //0037: 27              DAA                          ; Make it binary coded decimal
-                //0038: 32 EB 20        LD      (numCoins),A        ; New number of credits"
-                //003B: CD 47 19        CALL    DrawNumCredits      ; Draw credits on screen
+sta gamevars8080.numCoins                //0038: 32 EB 20        LD      (numCoins),A        ; New number of credits"
+jsr DrawNumCredits                //003B: CD 47 19        CALL    DrawNumCredits      ; Draw credits on screen
+maxCoins:
                 //003E: AF              XOR     A                    ; Credit switch ...
-                //003F: 32 EA 20        LD      (coinSwitch),A      ; ... has opened"
-                //;
-                //0042: 3A E9 20        LD      A,(suspendPlay)     ; Are we moving ..."
+stz gamevars8080.coinSwitch                //003F: 32 EA 20        LD      (coinSwitch),A      ; ... has opened"
+
+noCoinDeposit:                //;
+lda gamevars8080.suspendPlay                //0042: 3A E9 20        LD      A,(suspendPlay)     ; Are we moving ..."
                 //0045: A7              AND     A                    ; ... game objects?
-                //0046: CA 82 00        JP      Z,$0082             ; No ... restore registers and out"
-                //0049: 3A EF 20        LD      A,(gameMode)        ; Are we in ..."
+beq isrExit                //0046: CA 82 00        JP      Z,$0082             ; No ... restore registers and out"
+lda gamevars8080.gameMode                //0049: 3A EF 20        LD      A,(gameMode)        ; Are we in ..."
                 //004C: A7              AND     A                    ; ... game mode?
-                //004D: C2 6F 00        JP      NZ,$006F            ; Yes ... go process game-play things and out"
-                //0050: 3A EB 20        LD      A,(numCoins)        ; Number of credits"
+bne gameLoop                //004D: C2 6F 00        JP      NZ,$006F            ; Yes ... go process game-play things and out"
+lda gamevars8080.numCoins                //0050: 3A EB 20        LD      A,(numCoins)        ; Number of credits"
                 //0053: A7              AND     A                    ; Are there any credits (player standing there)?
-                //0054: C2 5D 00        JP      NZ,$005D            ; Yes ... skip any ISR animations for the splash screens"
-                //0057: CD BF 0A        CALL    ISRSplTasks         ; Process ISR tasks for splash screens
-                //005A: C3 82 00        JP      $0082                ; Restore registers and out
+bne gotCredits                //0054: C2 5D 00        JP      NZ,$005D            ; Yes ... skip any ISR animations for the splash screens"
+jsr ISRSplTasks                //0057: CD BF 0A        CALL    ISRSplTasks         ; Process ISR tasks for splash screens
+bra isrExit                //005A: C3 82 00        JP      $0082                ; Restore registers and out
                 //;
-                //; At this point no game is going and there are credits
-                //005D: 3A 93 20        LD      A,(waitStartLoop)   ; Are we in the ..."
+gotCredits:                //; At this point no game is going and there are credits
+break()
+lda gamevars8080.waitStartLoop                //005D: 3A 93 20        LD      A,(waitStartLoop)   ; Are we in the ..."
                 //0060: A7              AND     A                    ; ... ""press start" loop?"
-                //0061: C2 82 00        JP      NZ,$0082            ; Yes ... restore registers and out"
-                //0064: C3 65 07        JP      WaitForStart        ; Start the ""press start" loop"
+bne isrExit                //0061: C2 82 00        JP      NZ,$0082            ; Yes ... restore registers and out"
+jmp waitForStart                //0064: C3 65 07        JP      WaitForStart        ; Start the ""press start" loop"
                 //;
                 //; Mark credit as needing registering
                 //0067: 3E 01           LD      A,$01                ; Remember switch ..."
                 //0069: 32 EA 20        LD      (coinSwitch),A      ; ... state for debounce"
                 //006C: C3 3F 00        JP      $003F                ; Continue
                 //;
-                //; Main game-play timing loop
-                //006F: CD 40 17        CALL    TimeFleetSound      ; Time down fleet sound and sets flag if needs new delay value
-                //0072: 3A 32 20        LD      A,(obj2TimerExtra)  ; Use rolling shot's timer to sync ..."
+gameLoop:                //; Main game-play timing loop
+jsr TimeFleetSound                //006F: CD 40 17        CALL    TimeFleetSound      ; Time down fleet sound and sets flag if needs new delay value
+gameLoopNoSound:
+break()                //0072: 3A 32 20        LD      A,(obj2TimerExtra)  ; Use rolling shot's timer to sync ..."
                 //0075: 32 80 20        LD      (shotSync),A        ; ... other two shots"
                 //0078: CD 00 01        CALL    DrawAlien           ; Draw the current alien (or exploding alien)
                 //007B: CD 48 02        CALL    RunGameObjs         ; Process game objects (including player object)
                 //007E: CD 13 09        CALL    TimeToSaucer        ; Count down time to saucer
                 //0081: 00              NOP                          ; ** Why are we waiting?
-                //;
-                //0082: E1              POP     HL                   ; Restore ...
-                //0083: D1              POP     DE                   ; ...
-                //0084: C1              POP     BC                   ; ...
+isrExit:                //;
+lda HLstack                //0082: E1              POP     HL                   ; Restore ...
+sta HL
+lda HLstack+1
+sta HL
+lda DEstack                //0083: D1              POP     DE                   ; ...
+sta DE
+lda DEstack+1
+sta DE
+lda BCstack                //0084: C1              POP     BC                   ; ...
+sta BC
+lda BCstack+1
+sta BC
                 //0085: F1              POP     AF                   ; ... everything
                 //0086: FB              EI                           ; Enable interrupts
-                //0087: C9              RET                          ; Return from interrupt
+rts                //0087: C9              RET                          ; Return from interrupt
                 //
                 //0088: 00 00 00 00 ; ** Why waste the space?
-                //
-                //; Continues here at scanline 96
-                //;
-                //008C: AF              XOR     A                    ; Flag that tells ...
-                //008D: 32 72 20        LD      (vblankStatus),A    ; ... objects on the upper half of screen to draw/move"
-                //0090: 3A E9 20        LD      A,(suspendPlay)     ; Are we moving ..."
-                //0093: A7              AND     A                    ; ... game objects?
-                //0094: CA 82 00        JP      Z,$0082             ; No ... restore and return"
-                //0097: 3A EF 20        LD      A,(gameMode)        ; Are we in ..."
-                //009A: A7              AND     A                    ; ... game mode?
-                //009B: C2 A5 00        JP      NZ,$00A5            ; Yes .... process game objects and out"
-                //009E: 3A C1 20        LD      A,(isrSplashTask)   ; Splash-animation tasks"
-                //00A1: 0F              RRCA                         ; If we are in demo-mode then we'll process the tasks anyway
-                //00A2: D2 82 00        JP      NC,$0082            ; Not in demo mode ... done"
-                //;
-                //00A5: 21 20 20        LD      HL,$2020            ; Game object table (skip player-object at 2010)"
-                //00A8: CD 4B 02        CALL    $024B                ; Process all game objects (except player object)
-                //00AB: CD 41 01        CALL    CursorNextAlien     ; Advance cursor to next alien (move the alien if it is last one)
-                //00AE: C3 82 00        JP      $0082                ; Restore and return
                 //The Aliens
                 //InitRack:
                 //; Initialize the player's rack of aliens. Copy the reference-location and deltas from the
@@ -196,7 +243,7 @@ jmp init        //0003: C3 D4 18        JP      init                 ; Continue 
                 //013F: EB              EX      DE,HL                ; Back to DE"
                 //0140: C9              RET                          ; Out
                 //
-                //CursorNextAlien:
+CursorNextAlien:                //CursorNextAlien:
                 //; This is called from the mid-screen ISR to set the cursor for the next alien to draw.
                 //; When the cursor moves over all aliens then it is reset to the beginning and the reference
                 //; alien is moved to its next position.
@@ -205,7 +252,7 @@ jmp init        //0003: C3 D4 18        JP      init                 ; Continue 
                 //; When the cursor is moved here then the flag at 2000 is set to 1. This routine will not change
                 //; the cursor until the alien-draw routine at 100 clears the flag. Thus no alien is skipped.
                 //;
-                //0141: 3A 68 20        LD      A,(playerOK)        ; Is the player ..."
+rts                //0141: 3A 68 20        LD      A,(playerOK)        ; Is the player ..."
                 //0144: A7              AND     A                    ; ... blowing up?
                 //0145: C8              RET     Z                    ; Yes ... ignore the aliens
                 //0146: 3A 00 20        LD      A,(waitOnDraw)      ; Still waiting on ..."
@@ -338,9 +385,12 @@ jmp init        //0003: C3 D4 18        JP      init                 ; Continue 
                 //; Block copy ROM mirror 1B00-1BBF to initialize RAM at 2000-20BF.
 CopyRAMMirror:                //;
 lda #$c0               //01E4: 06 C0           LD      B,$C0                ; Number of bytes"
-CopyRAMMirrorB:
 sta BC+1
-                 //01E6: 11 00 1B        LD      DE,$1B00            ; RAM mirror in ROM"
+CopyRAMMirrorB:
+lda #<InitializationDATA                 //01E6: 11 00 1B        LD      DE,$1B00            ; RAM mirror in ROM"
+sta DE
+lda #>InitializationDATA
+sta DE+1
 lda #<gamevars8080.waitOnDraw                //01E9: 21 00 20        LD      HL,$2000            ; Start of RAM"
 sta HL
 lda #>gamevars8080.waitOnDraw
@@ -421,8 +471,8 @@ jmp BlockCopy                //01EC: C3 32 1A        JP      BlockCopy          
                 //0242: CD 7C 14        CALL    RememberShields     ; Remember player's shields
                 //0245: C3 35 02        JP      $0235                ; Continue with next shield
                 //Game Objects
-                //RunGameObjs:
-                //; Process game objects. Each game object has a 16 byte structure. The handler routine for the object
+RunGameObjs:                //RunGameObjs:
+break()                //; Process game objects. Each game object has a 16 byte structure. The handler routine for the object
                 //; is at xx03 and xx04 of the structure. The pointer to xx04 is pushed onto the stack before calling
                 //; the handler.
                 //;
@@ -452,7 +502,8 @@ jmp BlockCopy                //01EC: C3 32 1A        JP      BlockCopy          
                 //; setting was too slow. It got changed to 0 (fastest possible).
                 //;
                 //0248: 21 10 20        LD      HL,$2010            ; First game object (active player)"
-                //024B: 7E              LD      A,(HL)              ; Have we reached the ..."
+RunGameObjs1:
+break()                //024B: 7E              LD      A,(HL)              ; Have we reached the ..."
                 //024C: FE FF           CP      $FF                  ; ... end of the object list?
                 //024E: C8              RET     Z                    ; Yes ... done
                 //024F: FE FE           CP      $FE                  ; Is object active?
@@ -1257,9 +1308,9 @@ jmp BlockCopy                //01EC: C3 32 1A        JP      BlockCopy          
                 //0762: C3 32 1A        JP      BlockCopy           ; Reset saucer object data
                 //
                 //
-                //WaitForStart:
-                //; Wait for player 1 start button press
-                //0765: 3E 01           LD      A,$01                ; Tell ISR that we ..."
+waitForStart:                //WaitForStart:
+break()                //; Wait for player 1 start button press
+lda #$01                //0765: 3E 01           LD      A,$01                ; Tell ISR that we ..."
                 //0767: 32 93 20        LD      (waitStartLoop),A   ; ... have started to wait"
                 //076A: 31 00 24        LD      SP,$2400            ; Reset stack"
                 //076D: FB              EI                           ; Enable interrupts
@@ -1456,12 +1507,24 @@ jmp BlockCopy                //01EC: C3 32 1A        JP      BlockCopy          
                 //
                 //08F1: 0E 03           LD      C,$03                ; Length of saucer-score message ... fall into print"
                 //
-                //PrintMessage:
+PrintMessage:                //PrintMessage:
                 //; Print a message on the screen
                 //; HL = coordinates
                 //; DE = message buffer
                 //; C = length
-                //08F3: 1A              LD      A,(DE)              ; Get character"
+	addressRegisterByHL(0,1,1,0)
+	//addressRegisterByHL(1,1,2,0)
+	ldy #$00
+PrintMessage1:
+	lda (DE),y
+	sta VERADATA0
+	lda #$01
+	sta VERADATA0
+	iny
+    cpy BC
+	bne PrintMessage1
+    rts
+                    //08F3: 1A              LD      A,(DE)              ; Get character"
                 //08F4: D5              PUSH    DE                   ; Preserve
                 //08F5: CD FF 08        CALL    DrawChar            ; Print character
                 //08F8: D1              POP     DE                   ; Restore
@@ -1474,6 +1537,16 @@ jmp BlockCopy                //01EC: C3 32 1A        JP      BlockCopy          
                 //DrawChar:
                 //; Get pointer to 8 byte sprite number in A and
                 //; draw sprite on screen at HL
+DrawChar:
+    tay
+	addressRegisterByHL(0,1,1,0)
+	tya
+    sta VERADATA0
+	lda #$01
+	sta VERADATA0
+    inc HL
+    inc HL
+    rts                
                 //08FF: 11 00 1E        LD      DE,$1E00            ; Character set"
                 //0902: E5              PUSH    HL                   ; Preserve
                 //0903: 26 00           LD      H,$00                ; MSB=0"
@@ -1593,30 +1666,31 @@ jmp BlockCopy                //01EC: C3 32 1A        JP      BlockCopy          
                 //09A9: 6F              LD      L,A                  ; ... to HL"
                 //09AA: C3 AD 09        JP      Print4Digits        ; ** Usually a good idea, but wasted here"
                 //
-                //Print4Digits:
-                //; Print 4 digits in DE
-                //09AD: 7A              LD      A,D                  ; Get first 2 digits of BCD or hex"
-                //09AE: CD B2 09        CALL    DrawHexByte         ; Print them
-                //09B1: 7B              LD      A,E                  ; Get second 2 digits of BCD or hex (fall into print)"
+Print4Digits:                //Print4Digits:
+                    //; Print 4 digits in DE
+lda DE+1                //09AD: 7A              LD      A,D                  ; Get first 2 digits of BCD or hex"
+jsr DrawHexByte                //09AE: CD B2 09        CALL    DrawHexByte         ; Print them
+lda DE                //09B1: 7B              LD      A,E                  ; Get second 2 digits of BCD or hex (fall into print)"
                 //
-                //DrawHexByte:
+DrawHexByte:                //DrawHexByte:
                 //; Display 2 digits in A to screen at HL
                 //09B2: D5              PUSH    DE                   ; Preserve
-                //09B3: F5              PUSH    AF                   ; Save for later
-                //09B4: 0F              RRCA                         ; Get ...
-                //09B5: 0F              RRCA                         ; ...
-                //09B6: 0F              RRCA                         ; ...
-                //09B7: 0F              RRCA                         ; ... left digit
-                //09B8: E6 0F           AND     $0F                  ; Mask out lower digit's bits
-                //09BA: CD C5 09        CALL    $09C5                ; To screen at HL
-                //09BD: F1              POP     AF                   ; Restore digit
-                //09BE: E6 0F           AND     $0F                  ; Mask out upper digit
-                //09C0: CD C5 09        CALL    $09C5                ; To screen
+pha                //09B3: F5              PUSH    AF                   ; Save for later
+ror                //09B4: 0F              RRCA                         ; Get ...
+ror                //09B5: 0F              RRCA                         ; ...
+ror                //09B6: 0F              RRCA                         ; ...
+ror                //09B7: 0F              RRCA                         ; ... left digit
+and #$0f                //09B8: E6 0F           AND     $0F                  ; Mask out lower digit's bits
+jsr printCharAtHL                //09BA: CD C5 09        CALL    $09C5                ; To screen at HL
+pla                //09BD: F1              POP     AF                   ; Restore digit
+and #$0f                //09BE: E6 0F           AND     $0F                  ; Mask out upper digit
+//jsr printCharAtHL                //09C0: CD C5 09        CALL    $09C5                ; To screen
                 //09C3: D1              POP     DE                   ; Restore
-                //09C4: C9              RET                          ; Done
-                //;
-                //09C5: C6 1A           ADD     A,$1A                ; Bump to number characters"
-                //09C7: C3 FF 08        JP      DrawChar            ; Continue ...
+//rts                //09C4: C9              RET                          ; Done
+printCharAtHL:                //;
+clc                //09C5: C6 1A           ADD     A,$1A                ; Bump to number characters"
+adc #$1a
+jmp DrawChar                //09C7: C3 FF 08        JP      DrawChar            ; Continue ...
                 //
                 //; Get score descriptor for active player
                 //09CA: 3A 67 20        LD      A,(playerDataMSB)   ; Get active player"
@@ -1757,21 +1831,25 @@ jmp BlockCopy                //01EC: C3 32 1A        JP      BlockCopy          
                 //
                 //OneSecDelay:
                 //; Delay 64 interrupts
-                //0AB1: 3E 40           LD      A,$40                ; Delay of 64 (tad over 1 sec)"
-                //0AB3: C3 D7 0A        JP      WaitOnDelay         ; Do delay
+OneSecDelay:
+lda #$40                //0AB1: 3E 40           LD      A,$40                ; Delay of 64 (tad over 1 sec)"
+jmp WaitOnDelay                //0AB3: C3 D7 0A        JP      WaitOnDelay         ; Do delay
                 //
                 //TwoSecDelay:
+TwoSecDelay:
                 //; Delay 128 interrupts
-                //0AB6: 3E 80           LD      A,$80                ; Delay of 80 (tad over 2 sec)"
-                //0AB8: C3 D7 0A        JP      WaitOnDelay         ; Do delay
+lda #$80                //0AB6: 3E 80           LD      A,$80                ; Delay of 80 (tad over 2 sec)"
+jmp WaitOnDelay                //0AB8: C3 D7 0A        JP      WaitOnDelay         ; Do delay
                 //
                 //SplashDemo:
-                //0ABB: E1              POP     HL                   ; Drop the call to ABF and ...
-                //0ABC: C3 72 00        JP      $0072                ; ... do a demo game loop without sound
+SplashDemo:                
+pla                //0ABB: E1              POP     HL                   ; Drop the call to ABF and ...
+pla     // remove return add from stack             
+jmp gameLoopNoSound                //0ABC: C3 72 00        JP      $0072                ; ... do a demo game loop without sound
                 //
-                //ISRSplTasks:
-                //; Different types of splash tasks managed by ISR in splash screens. The ISR
-                //; calls this if in splash-mode. These may have been bit flags to allow all 3
+ISRSplTasks:                //ISRSplTasks:
+break()                //; Different types of splash tasks managed by ISR in splash screens. The ISR
+lda #255                //; calls this if in splash-mode. These may have been bit flags to allow all 3
                 //; at the same time. Maybe it is just easier to do a switch with a rotate-to-carry.
                 //;
                 //0ABF: 3A C1 20        LD      A,(isrSplashTask)   ; Get the ISR task number"
@@ -1781,7 +1859,7 @@ jmp BlockCopy                //01EC: C3 32 1A        JP      BlockCopy          
                 //0AC7: DA 68 18        JP      C,SplashSprite      ; 2: Yes ... go move little alien from point A to B"
                 //0ACA: 0F              RRCA                         ; Shooting extra ""C" with squiggly shot?"
                 //0ACB: DA AB 0A        JP      C,SplashSquiggly    ; 4: Yes ... go shoot extra ""C" in splash"
-                //0ACE: C9              RET                          ; No task to do
+rts                //0ACE: C9              RET                          ; No task to do
                 //
                 //; Message to center of screen.
                 //; Only used in one place for ""SPACE  INVADERS"""
@@ -1791,11 +1869,13 @@ jmp BlockCopy                //01EC: C3 32 1A        JP      BlockCopy          
                 //
                 //WaitOnDelay:
                 //; Wait on ISR counter to reach 0
-                //0AD7: 32 C0 20        LD      (isrDelay),A        ; Delay counter"
-                //0ADA: 3A C0 20        LD      A,(isrDelay)        ; Get current delay"
+WaitOnDelay: 
+sta gamevars8080.isrDelay                //0AD7: 32 C0 20        LD      (isrDelay),A        ; Delay counter"
+!: lda gamevars8080.isrDelay               //0ADA: 3A C0 20        LD      A,(isrDelay)        ; Get current delay"
                 //0ADD: A7              AND     A                    ; Zero yet?
-                //0ADE: C2 DA 0A        JP      NZ,$0ADA            ; No ... wait on it"
-                //0AE1: C9              RET                          ; Out
+bne !-                //0ADE: C2 DA 0A        JP      NZ,$0ADA            ; No ... wait on it"
+break()
+rts                //0AE1: C9              RET                          ; Out
                 //
                 //IniSplashAni:
                 //; Init the splash-animation block
@@ -1805,14 +1885,14 @@ jmp BlockCopy                //01EC: C3 32 1A        JP      BlockCopy          
                 //
                 //;=============================================================
 afterIniSplash:                //; After initialization ... splash screens
-                //0AEA: AF              XOR     A                    ; Make a 0
+lda #$00                //0AEA: AF              XOR     A                    ; Make a 0
                 //0AEB: D3 03           OUT     (SOUND1),A          ; Turn off sound"
                 //0AED: D3 05           OUT     (SOUND2),A          ; Turn off sound"
-                //0AEF: CD 82 19        CALL    $1982                ; Turn off ISR splash-task
-                //0AF2: FB              EI                           ; Enable interrupts (using them for delays)
-                //0AF3: CD B1 0A        CALL    OneSecDelay         ; One second delay
-                //0AF6: 3A EC 20        LD      A,(splashAnimate)   ; Splash screen type"
-                //0AF9: A7              AND     A                    ; Set flags based on type
+jsr setISRSplashTask                //0AEF: CD 82 19        CALL    $1982                ; Turn off ISR splash-task
+cli                //0AF2: FB              EI                           ; Enable interrupts (using them for delays)
+jsr OneSecDelay                //0AF3: CD B1 0A        CALL    OneSecDelay         ; One second delay
+break()                //0AF6: 3A EC 20        LD      A,(splashAnimate)   ; Splash screen type"
+lda #02               //0AF9: A7              AND     A                    ; Set flags based on type
                 //0AFA: 21 17 30        LD      HL,$3017            ; Screen coordinates (middle near top)"
                 //0AFD: 0E 04           LD      C,$04                ; 4 characters in ""PLAY"""
                 //0AFF: C2 E8 0B        JP      NZ,$0BE8            ; Not 0 ... do ""normal" PLAY"
@@ -3343,10 +3423,10 @@ afterIniSplash:                //; After initialization ... splash screens
                 //
                 //173E: 00 00 ; ** Why?
                 //
-                //TimeFleetSound:
-                //; This called from the ISR times down the fleet and sets the flag at 2095 if
-                //; the fleet needs a change in sound handling (new delay, new sound)"
-                //1740: 21 9B 20        LD      HL,$209B            ; Pointer to hold time for fleet"
+TimeFleetSound:                //TimeFleetSound:
+break()                //; This called from the ISR times down the fleet and sets the flag at 2095 if
+lda #09                //; the fleet needs a change in sound handling (new delay, new sound)"
+rts                //1740: 21 9B 20        LD      HL,$209B            ; Pointer to hold time for fleet"
                 //1743: 35              DEC     (HL)                 ; Decrement hold time
                 //1744: CC 6D 17        CALL    Z,$176D             ; If 0 turn fleet movement sound off"
                 //1747: 3A 68 20        LD      A,(playerOK)        ; Is player OK?"
@@ -3594,9 +3674,9 @@ afterIniSplash:                //; After initialization ... splash screens
                 //;
                 //init:
 init:               //18D4: 31 00 24        LD      SP,$2400            ; Set stack pointer just below screen"
-stz BC             //18D7: 06 00           LD      B,$00                ; Count 256 bytes"
+stz BC+1             //18D7: 06 00           LD      B,$00                ; Count 256 bytes"
 jsr CopyRAMMirrorB               //18D9: CD E6 01        CALL    $01E6                ; Copy ROM to RAM
-                //18DC: CD 56 19        CALL    DrawStatus          ; Print scores and credits
+jsr DrawStatus                //18DC: CD 56 19        CALL    DrawStatus          ; Print scores and credits
                 //;
 lda #$08                //18DF: 3E 08           LD      A,$08                ; Set alien ..."
 sta gamevars8080.aShotReloadRate               //18E1: 32 CF 20        LD      (aShotReloadRate),A ; ... shot reload rate"
@@ -3644,57 +3724,89 @@ jmp afterIniSplash                //18E4: C3 EA 0A        JP      $0AEA         
                 //1918: 23              INC     HL                   ; Bump to player 2
                 //1919: C9              RET                          ; Return
                 //
-                //DrawScoreHead:
+DrawScoreHead:                //DrawScoreHead:
                 //; Print score header " SCORE<1> HI-SCORE SCORE<2> """
-                //191A: 0E 1C           LD      C,$1C                ; 28 bytes in message"
-                //191C: 21 1E 24        LD      HL,$241E            ; Screen coordinates"
-                //191F: 11 E4 1A        LD      DE,$1AE4            ; Score header message"
-                //1922: C3 F3 08        JP      PrintMessage        ; Print score header
+lda #$1c                //191A: 0E 1C           LD      C,$1C                ; 28 bytes in message"
+sta BC
+lda #$0c      // offset 6*2 chars since screen is 40 and real is 28          //191C: 21 1E 24        LD      HL,$241E            ; Screen coordinates"line 2(256pix*28 chars)
+sta HL
+lda #$01    //2nd row
+sta HL+1
+lda #<MessageScore                 //191F: 11 E4 1A        LD      DE,$1AE4            ; Score header message"
+sta DE
+lda #>MessageScore
+sta DE+1
+jmp PrintMessage                //1922: C3 F3 08        JP      PrintMessage        ; Print score header
                 //
-                //1925: 21 F8 20        LD      HL,$20F8            ; Player 1 score descriptor"
-                //1928: C3 31 19        JP      DrawScore           ; Print score
+PrintP1Score:
+lda #<gamevars8080.P1ScorL                //1925: 21 F8 20        LD      HL,$20F8            ; Player 1 score descriptor"
+sta HL
+bra printScore2                //1928: C3 31 19        JP      DrawScore           ; Print score
                 //
-                //192B: 21 FC 20        LD      HL,$20FC            ; Player 2 score descriptor"
+PrintP2Score:
+lda #<gamevars8080.P2ScorL               //192B: 21 FC 20        LD      HL,$20FC            ; Player 2 score descriptor"
+sta HL
+printScore2:
+lda #>gamevars8080.P1ScorL
+sta HL+1
                 //192E: C3 31 19        JP      DrawScore           ; Print score
                 //
-                //DrawScore:
+DrawScore:                //DrawScore:
                 //; Print score.
-                //; HL = descriptor
-                //1931: 5E              LD      E,(HL)              ; Get score LSB"
-                //1932: 23              INC     HL                   ; Next
-                //1933: 56              LD      D,(HL)              ; Get score MSB"
-                //1934: 23              INC     HL                   ; Next
-                //1935: 7E              LD      A,(HL)              ; Get coordinate LSB"
-                //1936: 23              INC     HL                   ; Next
-                //1937: 66              LD      H,(HL)              ; Get coordiante MSB"
-                //1938: 6F              LD      L,A                  ; Set LSB"
-                //1939: C3 AD 09        JP      Print4Digits        ; Print 4 digits in DE
+               //; HL = descriptor
+lda (HL)                //1931: 5E              LD      E,(HL)              ; Get score LSB"
+sta DE
+inc HL                //1932: 23              INC     HL                   ; Next
+lda (HL)                //1933: 56              LD      D,(HL)              ; Get score MSB"
+sta DE+1
+inc HL                //1934: 23              INC     HL                   ; Next
+lda (HL)                //1935: 7E              LD      A,(HL)              ; Get coordinate LSB"
+inc HL                //1936: 23              INC     HL                   ; Next
+tax
+lda (HL)                //1937: 66              LD      H,(HL)              ; Get coordiante MSB"
+sta HL+1
+txa                //1938: 6F              LD      L,A                  ; Set LSB"
+sta HL
+jmp Print4Digits                //1939: C3 AD 09        JP      Print4Digits        ; Print 4 digits in DE
                 //
-                //; Print message ""CREDIT """
-                //193C: 0E 07           LD      C,$07                ; 7 bytes in message"
-                //193E: 21 01 35        LD      HL,$3501            ; Screen coordinates"
-                //1941: 11 A9 1F        LD      DE,$1FA9            ; Message = ""CREDIT """
-                //1944: C3 F3 08        JP      PrintMessage        ; Print message
+printCreditMsg:                //; Print message ""CREDIT """
+lda #$07                //193C: 0E 07           LD      C,$07                ; 7 bytes in message"
+sta BC
+lda #$2e               //193E: 21 01 35        LD      HL,$3501            ; Screen coordinates"
+sta HL
+lda #$1c
+sta HL+1
+lda #<MessageCredit                //1941: 11 A9 1F        LD      DE,$1FA9            ; Message = ""CREDIT """
+sta DE
+lda #>MessageCredit
+sta DE+1
+jmp PrintMessage                //1944: C3 F3 08        JP      PrintMessage        ; Print message
                 //
-                //DrawNumCredits:
+DrawNumCredits:                //DrawNumCredits:
                 //; Display number of credits on screen
-                //1947: 3A EB 20        LD      A,(numCoins)        ; Number of credits"
-                //194A: 21 01 3C        LD      HL,$3C01            ; Screen coordinates"
-                //194D: C3 B2 09        JP      DrawHexByte         ; Character to screen
+lda #$3c                //194A: 21 01 3C        LD      HL,$3C01            ; Screen coordinates"
+sta HL
+lda #$1c
+sta HL+1
+lda gamevars8080.numCoins                //1947: 3A EB 20        LD      A,(numCoins)        ; Number of credits"
+jmp DrawHexByte                //194D: C3 B2 09        JP      DrawHexByte         ; Character to screen
+                                //
+PrintHiScore:                //PrintHiScore:
+lda #<gamevars8080.HiScorL                //1950: 21 F4 20        LD      HL,$20F4            ; Hi Score descriptor"
+sta HL
+lda #>gamevars8080.HiScorL
+sta HL+1
+bra DrawScore                //1953: C3 31 19        JP      DrawScore           ; Print Hi-Score
                 //
-                //PrintHiScore:
-                //1950: 21 F4 20        LD      HL,$20F4            ; Hi Score descriptor"
-                //1953: C3 31 19        JP      DrawScore           ; Print Hi-Score
-                //
-                //DrawStatus:
+DrawStatus:                //DrawStatus:
                 //; Print scores (with header) and credits (with label)
-                //1956: CD 5C 1A        CALL    ClearScreen         ; Clear the screen
-                //1959: CD 1A 19        CALL    DrawScoreHead       ; Print score header
-                //195C: CD 25 19        CALL    $1925                ; Print player 1 score
-                //195F: CD 2B 19        CALL    $192B                ; Print player 2 score
-                //1962: CD 50 19        CALL    PrintHiScore        ; Print hi score
-                //1965: CD 3C 19        CALL    $193C                ; Print credit lable
-                //1968: C3 47 19        JP      DrawNumCredits      ; Number of credits
+jsr screen.cls  //1956: CD 5C 1A        CALL    ClearScreen         ; Clear the screen
+jsr DrawScoreHead                //1959: CD 1A 19        CALL    DrawScoreHead       ; Print score header
+jsr PrintP1Score                //195C: CD 25 19        CALL    $1925                ; Print player 1 score
+jsr PrintP2Score                //195F: CD 2B 19        CALL    $192B                ; Print player 2 score
+jsr PrintHiScore                //1962: CD 50 19        CALL    PrintHiScore        ; Print hi score
+jsr printCreditMsg                //1965: CD 3C 19        CALL    $193C                ; Print credit lable
+jmp DrawNumCredits                //1968: C3 47 19        JP      DrawNumCredits      ; Number of credits
                 //
                 //196B: CD DC 19        CALL    SoundBits3Off       ; From 170B with B=FB. Turn off player shot sound
                 //196E: C3 71 16        JP      $1671                ; Update high-score if player's score is greater
@@ -3702,13 +3814,14 @@ jmp afterIniSplash                //18E4: C3 EA 0A        JP      $0AEA         
                 //1971: 3E 01           LD      A,$01                ; Set flag that ..."
                 //1973: 32 6D 20        LD      (invaded),A         ; ... aliens reached bottom of screen"
                 //1976: C3 E6 16        JP      $16E6                ; End of round
-                //
+break()                //
                 //1979: CD D7 19        CALL    DsableGameTasks     ; Disable ISR game tasks
                 //197C: CD 47 19        CALL    DrawNumCredits      ; Display number of credits on screen
-                //197F: C3 3C 19        JP      $193C                ; Print message ""CREDIT"""
+jsr printCreditMsg                //197F: C3 3C 19        JP      $193C                ; Print message ""CREDIT"""
                 //
-                //1982: 32 C1 20        LD      (isrSplashTask),A   ; Set ISR splash task"
-                //1985: C9              RET                          ; Done
+setISRSplashTask:
+ sta gamevars8080.isrSplashTask               //1982: 32 C1 20        LD      (isrSplashTask),A   ; Set ISR splash task"
+ rts               //1985: C9              RET                          ; Done
                 //
                 //; The original code (from TAITO) printed this message on the screen. When Midway branched the code
                 //; they changed the logic so it isn't printed.
@@ -3992,11 +4105,11 @@ rts                //1A3A: C9              RET                          ; Done
                 //1ACF: 0E 0D 0B 18 26 1B 0F 0B 00 18 04 11 26 26 
                 //1ADD: 01 14 13 13 0E 0D 26                   
                 //
-                //MessageScore:
+MessageScore:                //MessageScore:
                 //; " SCORE<1> HI-SCORE SCORE<2>"""
-                //1AE4: 26 12 02 0E 11 04 24 1B 25 26 07 08   
-                //1AF0: 3F 12 02 0E 11 04 26 12 02 0E 11 04   
-                //1AFC: 24 1C 25 26                      
+.byte  $26, $12, $02, $0E, $11, $04, $24, $1B, $25, $26, $07, $08                //1AE4: 26 12 02 0E 11 04 24 1B 25 26 07 08   
+.byte  $3F, $12, $02, $0E, $11, $04, $26, $12, $02, $0E, $11, $04           //1AF0: 3F 12 02 0E 11 04 26 12 02 0E 11 04   
+.byte  $24, $1C, $25, $26            //1AFC: 24 1C 25 26                      
                 //
                 //;-------------------------- RAM initialization -----------------------------
                 //; Coppied to RAM (2000) C0 bytes as initialization.
@@ -4074,7 +4187,7 @@ InitializationDATA:                //
                 //
                 //; More RAM initialization copied by 18D9
 .byte  $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $00, $00, $01, $74, $1F, $00              //1BE0: 00 00 00 00 00 00 00 00 00 01 00 00 01 74 1F 00                                      
-.byte  $80, $00, $00, $00, $00, $00, $1C, $2F, $00, $00, $1C, $27, $00, $00, $1C, $39               //1BF0: 80 00 00 00 00 00 1C 2F 00 00 1C 27 00 00 1C 39 
+.byte  $80, $00, $00, $00, $00, $00, $24, $03, $00, $00, $12, $03, $00, $00, $36, $03               //1BF0: 80 00 00 00 00 00 1C 2F 00 00 1C 27 00 00 1C 39 
                 //
                 //AlienSprA:
                 //Alien Images
@@ -4587,8 +4700,8 @@ InitializationDATA:                //
                 //1FA4: 07 2A E1 1F                  ; ""*2 PLAYERS 2 COINS" to screen at 2A07"
                 //1FA8: FF                           ; Terminates ""table print"""
                 //
-                //MessageCredit:
-                //1FA9: 02 11 04 03 08 13 26       ; ""CREDIT " (with space on the end)"
+MessageCredit:                //MessageCredit:
+.byte  $02, $11, $04, $03, $08, $13, $26               //1FA9: 02 11 04 03 08 13 26       ; ""CREDIT " (with space on the end)"
                 //
                 //AlienSprCB:
                 //; ........
@@ -4712,3 +4825,4 @@ InitializationDATA:                //
                 //
                 //
                 //
+}

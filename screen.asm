@@ -1,4 +1,6 @@
 .cpu _65c02
+#importonce 
+
 #import "Lib\macro.asm"
 #import "Lib\constants.asm"
 

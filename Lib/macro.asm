@@ -47,6 +47,38 @@
 
 }
 
+.macro addressRegisterByHL(control,addressHiBit,increment,direction) {
+	
+	.if (control == 0){
+        // CTRL Bit 0 Controls which Data Byte to use,
+        // either DATA0 or DATA1 respectively
+
+        // using DATA0
+        lda VERACTRL
+        and #%11111110
+		sta VERACTRL
+	} else {
+        // using DATA1
+        lda VERACTRL
+		ora #$01
+		sta VERACTRL
+	}
+    lda HL
+	//lda #address
+	sta VERAAddrLow
+
+	lda HL+1
+    clc
+    adc #$b0
+    //lda #address>>8
+	sta VERAAddrHigh
+	
+	lda #(increment<<4 ) | addressHiBit | direction<<3
+	sta VERAAddrBank
+
+}
+
+
 .macro resetVera() {
 	
     lda #$80
