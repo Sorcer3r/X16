@@ -558,7 +558,7 @@ break()                //024B: 7E              LD      A,(HL)              ; Hav
                 //
                 //
                 //
-                //GameObj0:
+GameObj0:                //GameObj0:
                 //; Game object 0: Move/draw the player
                 //;
                 //; This task is only called at the mid-screen ISR. It ALWAYS does its work here, even though"
@@ -736,7 +736,7 @@ break()                //024B: 7E              LD      A,(HL)              ; Hav
                 //03B8: C3 46 03        JP      $0346                ; Enable alien fire ... move player's ship, draw it, and out"
                 //
                 //
-                //GameObj1:
+GameObj1:                //GameObj1:
                 //; Game object 1: Move/draw the player shot
                 //;
                 //; This task executes at either mid-screen ISR (if it is on the top half of the non-rotated screen) or
@@ -864,7 +864,7 @@ break()                //024B: 7E              LD      A,(HL)              ; Hav
                 //0475: C9              RET                          ; Done
                 //
                 //
-                //GameObj2:
+GameObj2:                //GameObj2:
                 //; Game object 2: Alien rolling-shot (targets player specifically)
                 //;
                 //; The 2-byte value at 2038 is where the firing-column-table-pointer would be (see other
@@ -912,7 +912,7 @@ break()                //024B: 7E              LD      A,(HL)              ; Hav
                 //04B3: C3 32 1A        JP      BlockCopy           ; ... from ROM mirror and out
                 //
                 //
-                //GameObj3:
+GameObj3:                //GameObj3:
                 //; Game object 3: Alien plunger-shot
                 //; This is skipped if there is only one alien left on the screen.
                 //;
@@ -958,7 +958,7 @@ break()                //024B: 7E              LD      A,(HL)              ; Hav
                 //; Game task 4 when splash screen alien is shooting extra ""C" with a squiggly shot"
                 //050E: E1              POP     HL                   ; Ignore the task data pointer passed on stack
                 //;
-                //; GameObject 4 comes here if processing a squiggly shot
+squigglyShot:                //; GameObject 4 comes here if processing a squiggly shot
                 //050F: 11 55 20        LD      DE,$2055            ; Squiggly shot data structure"
                 //0512: 3E DB           LD      A,$DB                ; LSB of last byte of picture"
                 //0514: CD 50 05        CALL    ToShotStruct        ; Copy squiggly shot to
@@ -1178,7 +1178,7 @@ break()                //024B: 7E              LD      A,(HL)              ; Hav
                 //
                 //       
                 //
-                //GameObj4:
+GameObj4:                //GameObj4:
                 //; Game object 4: Flying Saucer OR squiggly shot
                 //;
                 //; This task is shared by the squiggly-shot and the flying saucer. The saucer waits until the
@@ -1191,7 +1191,7 @@ break()                //024B: 7E              LD      A,(HL)              ; Hav
                 //0689: 21 83 20        LD      HL,$2083            ; Time-till-saucer flag"
                 //068C: 7E              LD      A,(HL)              ; Is it time ..."
                 //068D: A7              AND     A                    ; ... for a saucer?
-                //068E: CA 0F 05        JP      Z,$050F             ; No ... go process squiggly shot"
+beq squigglyShot                //068E: CA 0F 05        JP      Z,$050F             ; No ... go process squiggly shot"
                 //0691: 3A 56 20        LD      A,(squShotStepCnt)  ; Is there a ..."
                 //0694: A7              AND     A                    ; ... squiggly shot going?
                 //0695: C2 0F 05        JP      NZ,$050F            ; Yes ... go handle squiggly shot"
@@ -1518,7 +1518,7 @@ PrintMessage:                //PrintMessage:
 PrintMessage1:
 	lda (DE),y
 	sta VERADATA0
-	lda #$01
+	lda BC+1
 	sta VERADATA0
 	iny
     cpy BC
@@ -1825,9 +1825,12 @@ jmp DrawChar                //09C7: C3 FF 08        JP      DrawChar            
                 //0AA7: C2 93 0A        JP      NZ,PrintMessageDel  ; No ... do all"
                 //0AAA: C9              RET                          ; Out
                 //
-                //SplashSquiggly:
-                //0AAB: 21 50 20        LD      HL,$2050            ; Pointer to game-object 4 timer"
-                //0AAE: C3 4B 02        JP      $024B                ; Process squiggly-shot in demo mode
+SplashSquiggly:                //SplashSquiggly:
+lda #<gamevars8080.obj4TimerMSB                //0AAB: 21 50 20        LD      HL,$2050            ; Pointer to game-object 4 timer"
+sta HL
+lda #>gamevars8080.obj4TimerMSB
+sta HL+1
+jmp RunGameObjs1                //0AAE: C3 4B 02        JP      $024B                ; Process squiggly-shot in demo mode
                 //
                 //OneSecDelay:
                 //; Delay 64 interrupts
@@ -1848,17 +1851,17 @@ pla     // remove return add from stack
 jmp gameLoopNoSound                //0ABC: C3 72 00        JP      $0072                ; ... do a demo game loop without sound
                 //
 ISRSplTasks:                //ISRSplTasks:
-break()                //; Different types of splash tasks managed by ISR in splash screens. The ISR
-lda #255                //; calls this if in splash-mode. These may have been bit flags to allow all 3
+                //; Different types of splash tasks managed by ISR in splash screens. The ISR
+                //; calls this if in splash-mode. These may have been bit flags to allow all 3
                 //; at the same time. Maybe it is just easier to do a switch with a rotate-to-carry.
                 //;
-                //0ABF: 3A C1 20        LD      A,(isrSplashTask)   ; Get the ISR task number"
-                //0AC2: 0F              RRCA                         ; In demo play mode?
-                //0AC3: DA BB 0A        JP      C,SplashDemo        ; 1: Yes ... go do game play (without sound)"
-                //0AC6: 0F              RRCA                         ; Moving little alien from point A to B?
-                //0AC7: DA 68 18        JP      C,SplashSprite      ; 2: Yes ... go move little alien from point A to B"
-                //0ACA: 0F              RRCA                         ; Shooting extra ""C" with squiggly shot?"
-                //0ACB: DA AB 0A        JP      C,SplashSquiggly    ; 4: Yes ... go shoot extra ""C" in splash"
+lda gamevars8080.isrSplashTask                //0ABF: 3A C1 20        LD      A,(isrSplashTask)   ; Get the ISR task number"
+ror                //0AC2: 0F              RRCA                         ; In demo play mode?
+bcs SplashDemo                //0AC3: DA BB 0A        JP      C,SplashDemo        ; 1: Yes ... go do game play (without sound)"
+ror                //0AC6: 0F              RRCA                         ; Moving little alien from point A to B?
+bcs SplashSprite                //0AC7: DA 68 18        JP      C,SplashSprite      ; 2: Yes ... go move little alien from point A to B"
+ror                //0ACA: 0F              RRCA                         ; Shooting extra ""C" with squiggly shot?"
+bcs SplashSquiggly                //0ACB: DA AB 0A        JP      C,SplashSquiggly    ; 4: Yes ... go shoot extra ""C" in splash"
 rts                //0ACE: C9              RET                          ; No task to do
                 //
                 //; Message to center of screen.
@@ -1874,7 +1877,6 @@ sta gamevars8080.isrDelay                //0AD7: 32 C0 20        LD      (isrDel
 !: lda gamevars8080.isrDelay               //0ADA: 3A C0 20        LD      A,(isrDelay)        ; Get current delay"
                 //0ADD: A7              AND     A                    ; Zero yet?
 bne !-                //0ADE: C2 DA 0A        JP      NZ,$0ADA            ; No ... wait on it"
-break()
 rts                //0AE1: C9              RET                          ; Out
                 //
                 //IniSplashAni:
@@ -1891,8 +1893,8 @@ lda #$00                //0AEA: AF              XOR     A                    ; M
 jsr setISRSplashTask                //0AEF: CD 82 19        CALL    $1982                ; Turn off ISR splash-task
 cli                //0AF2: FB              EI                           ; Enable interrupts (using them for delays)
 jsr OneSecDelay                //0AF3: CD B1 0A        CALL    OneSecDelay         ; One second delay
-break()                //0AF6: 3A EC 20        LD      A,(splashAnimate)   ; Splash screen type"
-lda #02               //0AF9: A7              AND     A                    ; Set flags based on type
+lda gamevars8080.splashAnimate               //0AF6: 3A EC 20        LD      A,(splashAnimate)   ; Splash screen type"
+                //0AF9: A7              AND     A                    ; Set flags based on type
                 //0AFA: 21 17 30        LD      HL,$3017            ; Screen coordinates (middle near top)"
                 //0AFD: 0E 04           LD      C,$04                ; 4 characters in ""PLAY"""
                 //0AFF: C2 E8 0B        JP      NZ,$0BE8            ; Not 0 ... do ""normal" PLAY"
@@ -3615,8 +3617,8 @@ rts                //1740: 21 9B 20        LD      HL,$209B            ; Pointer
                 //1866: A7              AND     A                    ; Clear Carry
                 //1867: C9              RET                          ; Done
                 //
-                //SplashSprite:
-                //; Moves a sprite up or down in splash mode. Interrupt moves the sprite. When it reaches
+SplashSprite:                //SplashSprite:
+break()                //; Moves a sprite up or down in splash mode. Interrupt moves the sprite. When it reaches
                 //; Y value in 20CA the flag at 20CB is raised. The image flips between two pictures every
                 //; 4 movements.
                 //
@@ -3728,6 +3730,8 @@ DrawScoreHead:                //DrawScoreHead:
                 //; Print score header " SCORE<1> HI-SCORE SCORE<2> """
 lda #$1c                //191A: 0E 1C           LD      C,$1C                ; 28 bytes in message"
 sta BC
+lda #$01
+sta BC+1        //colour
 lda #$0c      // offset 6*2 chars since screen is 40 and real is 28          //191C: 21 1E 24        LD      HL,$241E            ; Screen coordinates"line 2(256pix*28 chars)
 sta HL
 lda #$01    //2nd row
@@ -3769,6 +3773,34 @@ txa                //1938: 6F              LD      L,A                  ; Set LS
 sta HL
 jmp Print4Digits                //1939: C3 AD 09        JP      Print4Digits        ; Print 4 digits in DE
                 //
+testchars:
+lda #1
+sta BC
+lda #1
+sta BC+1
+lda #14
+sta HL
+lda #$1c
+sta HL+1
+lda #<testchar1
+sta DE
+lda #>testchar1
+sta DE+1
+jsr PrintMessage
+lda #18
+sta HL
+lda #<testchar2
+sta DE
+lda #8
+sta BC
+lda #5
+sta BC+1
+jmp PrintMessage
+testchar1:
+.byte 29
+testchar2:
+.byte 57,58,57,58,57,58,57,58
+
 printCreditMsg:                //; Print message ""CREDIT """
 lda #$07                //193C: 0E 07           LD      C,$07                ; 7 bytes in message"
 sta BC
@@ -3796,7 +3828,7 @@ lda #<gamevars8080.HiScorL                //1950: 21 F4 20        LD      HL,$20
 sta HL
 lda #>gamevars8080.HiScorL
 sta HL+1
-bra DrawScore                //1953: C3 31 19        JP      DrawScore           ; Print Hi-Score
+jmp DrawScore                //1953: C3 31 19        JP      DrawScore           ; Print Hi-Score
                 //
 DrawStatus:                //DrawStatus:
                 //; Print scores (with header) and credits (with label)
@@ -3806,6 +3838,7 @@ jsr PrintP1Score                //195C: CD 25 19        CALL    $1925           
 jsr PrintP2Score                //195F: CD 2B 19        CALL    $192B                ; Print player 2 score
 jsr PrintHiScore                //1962: CD 50 19        CALL    PrintHiScore        ; Print hi score
 jsr printCreditMsg                //1965: CD 3C 19        CALL    $193C                ; Print credit lable
+jsr testchars
 jmp DrawNumCredits                //1968: C3 47 19        JP      DrawNumCredits      ; Number of credits
                 //
                 //196B: CD DC 19        CALL    SoundBits3Off       ; From 170B with B=FB. Turn off player shot sound
@@ -3814,7 +3847,7 @@ jmp DrawNumCredits                //1968: C3 47 19        JP      DrawNumCredits
                 //1971: 3E 01           LD      A,$01                ; Set flag that ..."
                 //1973: 32 6D 20        LD      (invaded),A         ; ... aliens reached bottom of screen"
                 //1976: C3 E6 16        JP      $16E6                ; End of round
-break()                //
+               //
                 //1979: CD D7 19        CALL    DsableGameTasks     ; Disable ISR game tasks
                 //197C: CD 47 19        CALL    DrawNumCredits      ; Display number of credits on screen
 jsr printCreditMsg                //197F: C3 3C 19        JP      $193C                ; Print message ""CREDIT"""
@@ -4116,11 +4149,11 @@ MessageScore:                //MessageScore:
                 //; See the description of RAM at the top of this file for the details on this data.
 InitializationDATA:                //
 .byte  $01, $00, $00, $10, $00, $00, $00, $00, $02, $78, $38, $78, $38, $00, $F8, $00               //1B00: 01 00 00 10 00 00 00 00 02 78 38 78 38 00 F8 00
-.byte  $00, $80, $00, $8E, $02, $FF, $05, $0C, $60, $1C, $20, $30, $10, $01, $00, $00              //1B10: 00 80 00 8E 02 FF 05 0C 60 1C 20 30 10 01 00 00   
-.byte  $00, $00, $00, $BB, $03, $00, $10, $90, $1C, $28, $30, $01, $04, $00, $FF, $FF              //1B20: 00 00 00 BB 03 00 10 90 1C 28 30 01 04 00 FF FF   
-.byte  $00, $00, $02, $76, $04, $00, $00, $00, $00, $00, $04, $EE, $1C, $00, $00, $03               //1B30: 00 00 02 76 04 00 00 00 00 00 04 EE 1C 00 00 03    
-.byte  $00, $00, $00, $B6, $04, $00, $00, $01, $00, $1D, $04, $E2, $1C, $00, $00, $03              //1B40: 00 00 00 B6 04 00 00 01 00 1D 04 E2 1C 00 00 03 
-.byte  $00, $00, $00, $82, $06, $00, $00, $01, $06, $1D, $04, $D0, $1C, $00, $00, $03              //1B50: 00 00 00 82 06 00 00 01 06 1D 04 D0 1C 00 00 03
+.byte  $00, $80, $00, <GameObj0, >GameObj0, $FF, $05, $0C, $60, $1C, $20, $30, $10, $01, $00, $00    //gameobj0 data          //1B10: 00 80 00 8E 02 FF 05 0C 60 1C 20 30 10 01 00 00   
+.byte  $00, $00, $00, <GameObj1, >GameObj1, $00, $10, $90, $1C, $28, $30, $01, $04, $00, $FF, $FF    //gameobj1 data          //1B20: 00 00 00 BB 03 00 10 90 1C 28 30 01 04 00 FF FF   
+.byte  $00, $00, $02, <GameObj2, >GameObj2, $00, $00, $00, $00, $00, $04, $EE, $1C, $00, $00, $03    //gameobj2 data           //1B30: 00 00 02 76 04 00 00 00 00 00 04 EE 1C 00 00 03    
+.byte  $00, $00, $00, <GameObj3, >GameObj3, $00, $00, $01, $00, $1D, $04, $E2, $1C, $00, $00, $03    //gameobj3 data          //1B40: 00 00 00 B6 04 00 00 01 00 1D 04 E2 1C 00 00 03 
+.byte  $00, $00, $00, <GameObj4, >GameObj4, $00, $00, $01, $06, $1D, $04, $D0, $1C, $00, $00, $03    //gameobj4 data          //1B50: 00 00 00 82 06 00 00 01 06 1D 04 D0 1C 00 00 03
 .byte  $FF, $00, $C0, $1C, $00, $00, $10, $21, $01, $00, $30, $00, $12, $00, $00, $00              //1B60: FF 00 C0 1C 00 00 10 21 01 00 30 00 12 00 00 00         
                 //
                 //; These don't need to be copied over to RAM (see 1BA0 below).
@@ -4187,7 +4220,7 @@ InitializationDATA:                //
                 //
                 //; More RAM initialization copied by 18D9
 .byte  $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $00, $00, $01, $74, $1F, $00              //1BE0: 00 00 00 00 00 00 00 00 00 01 00 00 01 74 1F 00                                      
-.byte  $80, $00, $00, $00, $00, $00, $24, $03, $00, $00, $12, $03, $00, $00, $36, $03               //1BF0: 80 00 00 00 00 00 1C 2F 00 00 1C 27 00 00 1C 39 
+.byte  $80, $00, $00, $00, $00, $00, $22, $03, $00, $00, $12, $03, $00, $00, $36, $03               //1BF0: 80 00 00 00 00 00 1C 2F 00 00 1C 27 00 00 1C 39 
                 //
                 //AlienSprA:
                 //Alien Images

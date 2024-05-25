@@ -79,7 +79,7 @@ lowerHalf:
     lda #$f0
     sta VERADATA0
     stz VERADATA0
-    lda #$c2             // set next line int to $38 (48d) for red (vblank will occor before to reset white for score)
+    lda #$c2            // set next line int to $38 (48d) for red (vblank will occor before to reset white for score)
     bra lineExit
 lowerHalf2:
     cmp #$c2            // bottom line colour 0 is white

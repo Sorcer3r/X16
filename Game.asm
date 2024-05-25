@@ -14,6 +14,7 @@ main: {
 
     jsr spriteEngine.copyGFXtoVera
 	jsr spriteEngine.buildSpriteAddressTable
+	jsr spriteEngine.setGreenColour
 
 	// todo  mod colour pallete to make 5 full green 0f0
 

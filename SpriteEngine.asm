@@ -266,6 +266,14 @@ exit:
     rts
 }
 
+setGreenColour:{
+addressRegister(0,PALETTEBASE+10,1,0)
+lda #$f0
+sta VERADATA0
+stz VERADATA0
+rts
+}
+
 copyGFXtoVera:{             // removed pallete - so no-$20 because files includes pallete data we dont need
     copyDataToVera(spriteFiles.spriteAliens,SPRITEALIENBASE,spriteFiles._spriteAliens - spriteFiles.spriteAliens)
     copyDataToVera(spriteFiles.spriteShots,SPRITESHOTBASE,spriteFiles._spriteShots - spriteFiles.spriteShots)
