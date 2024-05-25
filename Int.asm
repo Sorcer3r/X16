@@ -8,6 +8,7 @@
 #import "invaders8080code.asm"
 
 moveSpritesInt:{
+    backupVeraAddrInfo()
     addressRegister(0,VRAMPalette+2,1,0)
     lda $9f27
     and #$04
@@ -25,7 +26,7 @@ notline:
     lda #$ff        // reset col 1 to white (vblank here)
     sta VERADATA0
     sta VERADATA0
-    jsr inv8080.ScanLine224
+ //   jsr inv8080.ScanLine224
     lda VERAINTENABLE
     and #$7f  // clear bit 8 (line int)
     sta VERAINTENABLE
@@ -35,6 +36,7 @@ exit:
     lda VERAINTSTATUS 
     ora #$07  // set bit 1,2 to clear int flag (handle vsync in main loop!)
     sta VERAINTSTATUS
+    restoreVeraAddrInfo()
     jmp intReturn: $deaf
 
 lineInt:
@@ -87,6 +89,7 @@ lowerHalf2:
     lda #$ff
     sta VERADATA0
     sta VERADATA0
+    jsr inv8080.ScanLine224
     lda #$40
     bra lineExit
 

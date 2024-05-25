@@ -21,18 +21,9 @@ ScanLine96:     //called by my int handler that deals with colours. backup zp re
                 //;Interrupt brings us here when the beam is *near* the middle of the screen. The real middle
                 //;would be 224/2 = 112. The code pretends this interrupt happens at line 128.
                 //0008: F5              PUSH    AF                   ; Save ...
-lda BC                //0009: C5              PUSH    BC                   ; ...
-sta BCstack
-lda BC+1
-sta BCstack+1
-lda DE                //000A: D5              PUSH    DE                   ; ...
-sta DEstack
-lda DE+1
-sta DEstack+1
-lda HL                //000B: E5              PUSH    HL                   ; ... everything
-sta HLstack
-lda HL+1
-sta HLstack+1
+saveRegs()                //0009: C5              PUSH    BC                   ; ...
+                //000A: D5              PUSH    DE                   ; ...
+                //000B: E5              PUSH    HL                   ; ... everything
                 //000C: C3 8C 00        JP      $008C                ; Continue ISR at 8C (this was for space before #10)
                 //
                 //; Continues here at scanline 96
@@ -50,14 +41,10 @@ ror                //00A1: 0F              RRCA                         ; If we 
 bcc isrExit                //00A2: D2 82 00        JP      NC,$0082            ; Not in demo mode ... done"
                 //;
 processObjects:                
-lda #$20                //00A5: 21 20 20        LD      HL,$2020            ; Game object table (skip player-object at 2010)"
-sta HL
-sta HL+1
+loadHL(gamevars8080.obj1TimerMSB)       //00A5: 21 20 20        LD      HL,$2020            ; Game object table (skip player-object at 2010)"
 jsr RunGameObjs1                //00A8: CD 4B 02        CALL    $024B                ; Process all game objects (except player object)
 jsr CursorNextAlien                //00AB: CD 41 01        CALL    CursorNextAlien     ; Advance cursor to next alien (move the alien if it is last one)
 bra isrExit                //00AE: C3 82 00        JP      $0082                ; Restore and return
-
-
                 //000F: 00         ; Padding before fixed ISR address
                 //
                 //ScanLine224:
@@ -65,18 +52,9 @@ ScanLine224:    //called by my int handler for colours. backup zp regs?
                 // vblank 
                //; Interrupt brings us here when the beam is at the end of the screen (line 224) when the VBLANK begins.
                 //0010: F5              PUSH    AF                   ; Save ...
-lda BC                //0011: C5              PUSH    BC                   ; ...
-sta BCstack
-lda BC+1
-sta BCstack+1
-lda DE                //0012: D5              PUSH    DE                   ; ...
-sta DEstack
-lda DE+1
-sta DEstack+1
-lda HL                //0013: E5              PUSH    HL                   ; ... everything
-sta HLstack
-lda HL+1
-sta HLstack+1
+saveRegs()                //0011: C5              PUSH    BC                   ; ...
+                //0012: D5              PUSH    DE                   ; ...
+                //0013: E5              PUSH    HL                   ; ... everything
 lda #$80                //0014: 3E 80           LD      A,$80                ; Flag that tells objects ..."
 sta gamevars8080.vblankStatus                //0016: 32 72 20        LD      (vblankStatus),A    ; ... on the lower half of the screen to draw/move"
 dec gamevars8080.isrDelay                    //0019: 21 C0 20        LD      HL,isrDelay         ; Decrement ..."
@@ -138,18 +116,9 @@ break()                //0072: 3A 32 20        LD      A,(obj2TimerExtra)  ; Use
                 //007E: CD 13 09        CALL    TimeToSaucer        ; Count down time to saucer
                 //0081: 00              NOP                          ; ** Why are we waiting?
 isrExit:                //;
-lda HLstack                //0082: E1              POP     HL                   ; Restore ...
-sta HL
-lda HLstack+1
-sta HL
-lda DEstack                //0083: D1              POP     DE                   ; ...
-sta DE
-lda DEstack+1
-sta DE
-lda BCstack                //0084: C1              POP     BC                   ; ...
-sta BC
-lda BCstack+1
-sta BC
+restoreRegs()          //0082: E1              POP     HL                   ; Restore ...
+                //0083: D1              POP     DE                   ; ...
+                //0084: C1              POP     BC                   ; ...
                 //0085: F1              POP     AF                   ; ... everything
                 //0086: FB              EI                           ; Enable interrupts
 rts                //0087: C9              RET                          ; Return from interrupt
@@ -501,10 +470,10 @@ break()                //; Process game objects. Each game object has a 16 byte 
                 //; The third-byte-counter was used as a speed-governor for the player's object, but evidently even the slowest"
                 //; setting was too slow. It got changed to 0 (fastest possible).
                 //;
-                //0248: 21 10 20        LD      HL,$2010            ; First game object (active player)"
+loadHL(gamevars8080.obj0TimerMSB)                //0248: 21 10 20        LD      HL,$2010            ; First game object (active player)"
 RunGameObjs1:
 break()                //024B: 7E              LD      A,(HL)              ; Have we reached the ..."
-                //024C: FE FF           CP      $FF                  ; ... end of the object list?
+cmp #$ff                //024C: FE FF           CP      $FF                  ; ... end of the object list?
                 //024E: C8              RET     Z                    ; Yes ... done
                 //024F: FE FE           CP      $FE                  ; Is object active?
                 //0251: CA 81 02        JP      Z,$0281             ; No ... skip it"
@@ -1808,22 +1777,26 @@ jmp DrawChar                //09C7: C3 FF 08        JP      DrawChar            
                 //0A8F: 32 C1 20        LD      (isrSplashTask),A   ; ... ISR animation"
                 //0A92: C9              RET                          ; Done
                 //
-                //PrintMessageDel:
+PrintMessageDel:                //PrintMessageDel:
                 //; Print message from DE to screen at HL (length in C) with a
                 //; delay between letters.
-                //0A93: D5              PUSH    DE                   ; Preserve
-                //0A94: 1A              LD      A,(DE)              ; Get character"
-                //0A95: CD FF 08        CALL    DrawChar            ; Draw character on screen
+               //0A93: D5              PUSH    DE                   ; Preserve
+lda (DE)                //0A94: 1A              LD      A,(DE)              ; Get character"
+jsr DrawChar                //0A95: CD FF 08        CALL    DrawChar            ; Draw character on screen
                 //0A98: D1              POP     DE                   ; Preserve
-                //0A99: 3E 07           LD      A,$07                ; Delay between letters"
-                //0A9B: 32 C0 20        LD      (isrDelay),A        ; Set counter"
-                //0A9E: 3A C0 20        LD      A,(isrDelay)        ; Get counter"
-                //0AA1: 3D              DEC     A                    ; Is it 1?
-                //0AA2: C2 9E 0A        JP      NZ,$0A9E            ; No ... wait on it"
-                //0AA5: 13              INC     DE                   ; Next in message
-                //0AA6: 0D              DEC     C                    ; All done?
-                //0AA7: C2 93 0A        JP      NZ,PrintMessageDel  ; No ... do all"
-                //0AAA: C9              RET                          ; Out
+lda #$07               //0A99: 3E 07           LD      A,$07                ; Delay between letters"
+sta gamevars8080.isrDelay                //0A9B: 32 C0 20        LD      (isrDelay),A        ; Set counter"
+!delay:
+lda gamevars8080.isrDelay                //0A9E: 3A C0 20        LD      A,(isrDelay)        ; Get counter"
+dec                //0AA1: 3D              DEC     A                    ; Is it 1?
+bne !delay-                //0AA2: C2 9E 0A        JP      NZ,$0A9E            ; No ... wait on it"
+inc DE                //0AA5: 13              INC     DE                   ; Next in message
+bne !+
+inc DE+1
+!:
+dec BC                //0AA6: 0D              DEC     C                    ; All done?
+bne PrintMessageDel                //0AA7: C2 93 0A        JP      NZ,PrintMessageDel  ; No ... do all"
+rts                //0AAA: C9              RET                          ; Out
                 //
 SplashSquiggly:                //SplashSquiggly:
 lda #<gamevars8080.obj4TimerMSB                //0AAB: 21 50 20        LD      HL,$2050            ; Pointer to game-object 4 timer"
@@ -1859,16 +1832,18 @@ lda gamevars8080.isrSplashTask                //0ABF: 3A C1 20        LD      A,
 ror                //0AC2: 0F              RRCA                         ; In demo play mode?
 bcs SplashDemo                //0AC3: DA BB 0A        JP      C,SplashDemo        ; 1: Yes ... go do game play (without sound)"
 ror                //0AC6: 0F              RRCA                         ; Moving little alien from point A to B?
-bcs SplashSprite                //0AC7: DA 68 18        JP      C,SplashSprite      ; 2: Yes ... go move little alien from point A to B"
+bcc !+
+jmp SplashSprite                //0AC7: DA 68 18        JP      C,SplashSprite      ; 2: Yes ... go move little alien from point A to B"
+!:
 ror                //0ACA: 0F              RRCA                         ; Shooting extra ""C" with squiggly shot?"
 bcs SplashSquiggly                //0ACB: DA AB 0A        JP      C,SplashSquiggly    ; 4: Yes ... go shoot extra ""C" in splash"
 rts                //0ACE: C9              RET                          ; No task to do
                 //
                 //; Message to center of screen.
-                //; Only used in one place for ""SPACE  INVADERS"""
-                //0ACF: 21 14 2B        LD      HL,$2B14            ; Near center of screen"
-                //0AD2: 0E 0F           LD      C,$0F                ; 15 bytes in message"
-                //0AD4: C3 93 0A        JP      PrintMessageDel     ; Print and out
+messageInvCentre:                //; Only used in one place for ""SPACE  INVADERS"""
+loadHL($0b1a)                //0ACF: 21 14 2B        LD      HL,$2B14            ; Near center of screen"
+loadBC($000f)                //0AD2: 0E 0F           LD      C,$0F                ; 15 bytes in message"
+jmp PrintMessageDel                //0AD4: C3 93 0A        JP      PrintMessageDel     ; Print and out
                 //
                 //WaitOnDelay:
                 //; Wait on ISR counter to reach 0
@@ -1887,31 +1862,36 @@ rts                //0AE1: C9              RET                          ; Out
                 //
                 //;=============================================================
 afterIniSplash:                //; After initialization ... splash screens
-lda #$00                //0AEA: AF              XOR     A                    ; Make a 0
+    lda #$00                //0AEA: AF              XOR     A                    ; Make a 0
                 //0AEB: D3 03           OUT     (SOUND1),A          ; Turn off sound"
                 //0AED: D3 05           OUT     (SOUND2),A          ; Turn off sound"
-jsr setISRSplashTask                //0AEF: CD 82 19        CALL    $1982                ; Turn off ISR splash-task
-cli                //0AF2: FB              EI                           ; Enable interrupts (using them for delays)
-jsr OneSecDelay                //0AF3: CD B1 0A        CALL    OneSecDelay         ; One second delay
-lda gamevars8080.splashAnimate               //0AF6: 3A EC 20        LD      A,(splashAnimate)   ; Splash screen type"
+    jsr setISRSplashTask                //0AEF: CD 82 19        CALL    $1982                ; Turn off ISR splash-task
+    cli                //0AF2: FB              EI                           ; Enable interrupts (using them for delays)
+    jsr OneSecDelay                //0AF3: CD B1 0A        CALL    OneSecDelay         ; One second delay
                 //0AF9: A7              AND     A                    ; Set flags based on type
-                //0AFA: 21 17 30        LD      HL,$3017            ; Screen coordinates (middle near top)"
-                //0AFD: 0E 04           LD      C,$04                ; 4 characters in ""PLAY"""
-                //0AFF: C2 E8 0B        JP      NZ,$0BE8            ; Not 0 ... do ""normal" PLAY"
-                //0B02: 11 FA 1C        LD      DE,$1CFA            ; The ""PLAy" with an upside down 'Y'"
-                //0B05: CD 93 0A        CALL    PrintMessageDel     ; Print the ""PLAy"""
-                //0B08: 11 AF 1D        LD      DE,$1DAF            ; ""SPACE  INVADERS" message"
-                //0B0B: CD CF 0A        CALL    $0ACF                ; Print to middle-ish of screen
-                //0B0E: CD B1 0A        CALL    OneSecDelay         ; One second delay
-                //0B11: CD 15 18        CALL    DrawAdvTable        ; Draw ""SCORE ADVANCE TABLE" with print delay"
-                //0B14: CD B6 0A        CALL    TwoSecDelay         ; Two second delay
-                //0B17: 3A EC 20        LD      A,(splashAnimate)   ; Do splash ..."
+    loadHL($0824)                //0AFA: 21 17 30        LD      HL,$3017            ; Screen coordinates (middle near top)"
+    loadBC($0104)                //0AFD: 0E 04           LD      C,$04                ; 4 characters in ""PLAY"""
+    lda gamevars8080.splashAnimate               //0AF6: 3A EC 20        LD      A,(splashAnimate)   ; Splash screen type"
+    beq PlayU                //0AFF: C2 E8 0B        JP      NZ,$0BE8            ; Not 0 ... do ""normal" PLAY"
+    loadDE(MessagePlayY)                //0BE8: 11 AB 1D        LD      DE,$1DAB            ; ""PLAY" with normal 'Y'"
+    jsr PrintMessageDel                //0BEB: CD 93 0A        CALL    PrintMessageDel     ; Print it
+    bra continueSplash                //0BEE: C3 0B 0B        JP      $0B0B                ; Continue with splash (DE will be pointing to next message)
+PlayU:
+    loadDE(MessagePlayUY)                //0B02: 11 FA 1C        LD      DE,$1CFA            ; The ""PLAy" with an upside down 'Y'"
+    jsr PrintMessageDel                //0B05: CD 93 0A        CALL    PrintMessageDel     ; Print the ""PLAy"""
+    loadDE(MessageInvaders)                //0B08: 11 AF 1D        LD      DE,$1DAF            ; ""SPACE  INVADERS" message"
+continueSplash:
+    jsr messageInvCentre                //0B0B: CD CF 0A        CALL    $0ACF                ; Print to middle-ish of screen
+    jsr OneSecDelay                //0B0E: CD B1 0A        CALL    OneSecDelay         ; One second delay
+    jsr DrawAdvTable                //0B11: CD 15 18        CALL    DrawAdvTable        ; Draw ""SCORE ADVANCE TABLE" with print delay"
+    jsr TwoSecDelay            //0B14: CD B6 0A        CALL    TwoSecDelay         ; Two second delay
+    lda gamevars8080.splashAnimate           //0B17: 3A EC 20        LD      A,(splashAnimate)   ; Do splash ..."
                 //0B1A: A7              AND     A                    ; ... animations?
-                //0B1B: C2 4A 0B        JP      NZ,$0B4A            ; Not 0 ... no animations"
+    bne playDemo            //0B1B: C2 4A 0B        JP      NZ,$0B4A            ; Not 0 ... no animations"
                 //;
                 //; Animate small alien replacing upside-down Y with correct Y
-                //0B1E: 11 95 1A        LD      DE,$1A95            ; Animate sprite from Y=FE to Y=9E step -1"
-                //0B21: CD E2 0A        CALL    IniSplashAni        ; Copy to splash-animate structure
+    break()            //0B1E: 11 95 1A        LD      DE,$1A95            ; Animate sprite from Y=FE to Y=9E step -1"
+    lda 'y'            //0B21: CD E2 0A        CALL    IniSplashAni        ; Copy to splash-animate structure
                 //0B24: CD 80 0A        CALL    Animate             ; Wait for ISR to move sprite (small alien)
                 //0B27: 11 B0 1B        LD      DE,$1BB0            ; Animate sprite from Y=98 to Y=FF step 1"
                 //0B2A: CD E2 0A        CALL    IniSplashAni        ; Copy to splash-animate structure
@@ -1926,7 +1906,7 @@ lda gamevars8080.splashAnimate               //0AF6: 3A EC 20        LD      A,(
                 //0B44: CD CB 14        CALL    ClearSmallSprite    ; Clear a one byte sprite at HL
                 //0B47: CD B6 0A        CALL    TwoSecDelay         ; Two second delay
                 //;
-                //; Play demo
+playDemo:                //; Play demo
                 //0B4A: CD D6 09        CALL    ClearPlayField      ; Clear playfield
                 //0B4D: 3A FF 21        LD      A,(p1ShipsRem)      ; Number of ships for player-1"
                 //0B50: A7              AND     A                    ; If non zero ...
@@ -1992,9 +1972,6 @@ lda gamevars8080.splashAnimate               //0AF6: 3A EC 20        LD      A,(
                 //0BE2: CD D6 09        CALL    ClearPlayField      ; Clear play field
                 //0BE5: C3 DF 18        JP      $18DF                ; Keep splashing
                 //
-                //0BE8: 11 AB 1D        LD      DE,$1DAB            ; ""PLAY" with normal 'Y'"
-                //0BEB: CD 93 0A        CALL    PrintMessageDel     ; Print it
-                //0BEE: C3 0B 0B        JP      $0B0B                ; Continue with splash (HL will be pointing to next message)
                 //
                 //0BF1: CD 0A 19        CALL    PlyrShotAndBump     ; Check if player is shot and aliens bumping the edge of screen
                 //0BF4: C3 9A 19        JP      CheckHiddenMes      ; Check for hidden-message display sequence
@@ -3426,37 +3403,41 @@ lda gamevars8080.splashAnimate               //0AF6: 3A EC 20        LD      A,(
                 //173E: 00 00 ; ** Why?
                 //
 TimeFleetSound:                //TimeFleetSound:
-break()                //; This called from the ISR times down the fleet and sets the flag at 2095 if
-lda #09                //; the fleet needs a change in sound handling (new delay, new sound)"
-rts                //1740: 21 9B 20        LD      HL,$209B            ; Pointer to hold time for fleet"
-                //1743: 35              DEC     (HL)                 ; Decrement hold time
-                //1744: CC 6D 17        CALL    Z,$176D             ; If 0 turn fleet movement sound off"
-                //1747: 3A 68 20        LD      A,(playerOK)        ; Is player OK?"
+                //; This called from the ISR times down the fleet and sets the flag at 2095 if
+                //; the fleet needs a change in sound handling (new delay, new sound)"
+dec gamevars8080.fleetSndHold                //1740: 21 9B 20        LD      HL,$209B            ; Pointer to hold time for fleet"
+bne !+//1743: 35              DEC     (HL)                 ; Decrement hold time
+jsr fleetMoveSoundOff               //1744: CC 6D 17        CALL    Z,$176D             ; If 0 turn fleet movement sound off"
+!:
+lda gamevars8080.playerOK                //1747: 3A 68 20        LD      A,(playerOK)        ; Is player OK?"
                 //174A: A7              AND     A                    ; 1  means OK
-                //174B: CA 6D 17        JP      Z,$176D             ; Player not OK ... fleet movement sound off and out"
-                //174E: 21 96 20        LD      HL,$2096            ; Current time on fleet sound"
+beq fleetMoveSoundOff                //174B: CA 6D 17        JP      Z,$176D             ; Player not OK ... fleet movement sound off and out"
+dec gamevars8080.fleetSndCnt                //174E: 21 96 20        LD      HL,$2096            ; Current time on fleet sound"
                 //1751: 35              DEC     (HL)                 ; Count down
-                //1752: C0              RET     NZ                   ; Not time to change sound ... out
-                //1753: 21 98 20        LD      HL,$2098            ; Current sound port 3 value"
+bne !exit+                //1752: C0              RET     NZ                   ; Not time to change sound ... out
+lda gamevars8080.soundPort3                //1753: 21 98 20        LD      HL,$2098            ; Current sound port 3 value"
                 //1756: 7E              LD      A,(HL)              ; Get value"
                 //1757: D3 05           OUT     (SOUND2),A          ; Set sounds"
-                //1759: 3A 82 20        LD      A,(numAliens)       ; Number of aliens on active screen"
+lda gamevars8080.numAliens                //1759: 3A 82 20        LD      A,(numAliens)       ; Number of aliens on active screen"
                 //175C: A7              AND     A                    ; Is it zero?
-                //175D: CA 6D 17        JP      Z,$176D             ; Yes ... turn off fleet movement sound and out"
+beq fleetMoveSoundOff                //175D: CA 6D 17        JP      Z,$176D             ; Yes ... turn off fleet movement sound and out"
                 //1760: 2B              DEC     HL                   ; (2097) Point to fleet timer reload
-                //1761: 7E              LD      A,(HL)              ; Get fleet delay value"
+lda gamevars8080.fleetSndReload                //1761: 7E              LD      A,(HL)              ; Get fleet delay value"
                 //1762: 2B              DEC     HL                   ; (2096) Point to fleet timer
-                //1763: 77              LD      (HL),A              ; Reload the timer"
+sta gamevars8080.fleetSndCnt                //1763: 77              LD      (HL),A              ; Reload the timer"
                 //1764: 2B              DEC     HL                   ; Point to change-sound
-                //1765: 36 01           LD      (HL),$01            ; (2095) time to change sound"
-                //1767: 3E 04           LD      A,$04                ; Set hold ..."
-                //1769: 32 9B 20        LD      (fleetSndHold),A    ; ... time for fleet sound"
-                //176C: C9              RET                          ; Done
+lda #$01                //1765: 36 01           LD      (HL),$01            ; (2095) time to change sound"
+sta gamevars8080.changeFleetSnd
+lda #$04                //1767: 3E 04           LD      A,$04                ; Set hold ..."
+sta gamevars8080.fleetSndHold                //1769: 32 9B 20        LD      (fleetSndHold),A    ; ... time for fleet sound"
+!exit:
+rts                //176C: C9              RET                          ; Done
                 //
-                //176D: 3A 98 20        LD      A,(soundPort5)      ; Current sound port 3 value"
-                //1770: E6 30           AND     $30                  ; Mask off fleet movement sounds
+fleetMoveSoundOff:
+lda gamevars8080.soundPort5                //176D: 3A 98 20        LD      A,(soundPort5)      ; Current sound port 3 value"
+and #$30                //1770: E6 30           AND     $30                  ; Mask off fleet movement sounds
                 //1772: D3 05           OUT     (SOUND2),A          ; Set sounds"
-                //1774: C9              RET                          ; Out
+rts                //1774: C9              RET                          ; Out
                 //
                 //FleetDelayExShip:
                 //; This game-loop routine handles two sound functions. The routine does:
@@ -3561,26 +3542,33 @@ rts                //1740: 21 9B 20        LD      HL,$209B            ; Pointer
                 //1810: 06 01           LD      B,$01                ; Retrigger saucer ..."
                 //1812: C3 FA 18        JP      SoundBits3On        ; ... sound (retrigger makes it warble?)
                 //  
-                //DrawAdvTable:
+DrawAdvTable:                //DrawAdvTable:
                 //; Draw ""SCORE ADVANCE TABLE"""
-                //1815: 21 10 28        LD      HL,$2810            ; 0x410 is 1040 rotCol=32, rotRow=16"
-                //1818: 11 A3 1C        LD      DE,$1CA3            ; ""*SCORE ADVANCE TABLE*"""
-                //181B: 0E 15           LD      C,$15                ; 21 bytes in message"
-                //181D: CD F3 08        CALL    PrintMessage        ; Print message
-                //1820: 3E 0A           LD      A,$0A                ; 10 bytes in every ""=xx POINTS" string"
-                //1822: 32 6C 20        LD      (temp206C),A        ; Hold the count"
-                //1825: 01 BE 1D        LD      BC,$1DBE            ; Coordinate/sprite for drawing table"
-                //1828: CD 56 18        CALL    ReadPriStruct       ; Get HL=coordinate, DE=image"
-                //182B: DA 37 18        JP      C,$1837             ; Move on if done"
-                //182E: CD 44 18        CALL    $1844                ; Draw 16-byte sprite
-                //1831: C3 28 18        JP      $1828                ; Do all in table
-                //;
-                //1834: CD B1 0A        CALL    OneSecDelay         ; One second delay
-                //1837: 01 CF 1D        LD      BC,$1DCF            ; Coordinate/message for drawing table"
-                //183A: CD 56 18        CALL    ReadPriStruct       ; Get HL=coordinate, DE=message"
-                //183D: D8              RET     C                    ; Out if done
-                //183E: CD 4C 18        CALL    $184C                ; Print message
-                //1841: C3 3A 18        JP      $183A                ; Do all in table
+loadHL($0f14)                //1815: 21 10 28        LD      HL,$2810            ; 0x410 is 1040 rotCol=32, rotRow=16"
+loadDE(MessageAdv)                //1818: 11 A3 1C        LD      DE,$1CA3            ; ""*SCORE ADVANCE TABLE*"""
+loadBC($0115)                //181B: 0E 15           LD      C,$15                ; 21 bytes in message"
+jsr PrintMessage                //181D: CD F3 08        CALL    PrintMessage        ; Print message
+lda #$0a                //1820: 3E 0A           LD      A,$0A                ; 10 bytes in every ""=xx POINTS" string"
+sta gamevars8080.temp206C                //1822: 32 6C 20        LD      (temp206C),A        ; Hold the count"
+loadBC(scoreImages)                //1825: 01 BE 1D        LD      BC,$1DBE            ; Coordinate/sprite for drawing table"
+!next:
+jsr ReadPriStruct                //1828: CD 56 18        CALL    ReadPriStruct       ; Get HL=coordinate, DE=image"
+bcs advanceText                //182B: DA 37 18        JP      C,$1837             ; Move on if done"
+lda DE                //182E: CD 44 18        CALL    $1844                ; Draw 16-byte sprite
+jsr DrawChar
+lda DE+1
+jsr DrawChar
+bra !next-                //1831: C3 28 18        JP      $1828                ; Do all in table
+advanceText:                //;
+jsr OneSecDelay               //1834: CD B1 0A        CALL    OneSecDelay         ; One second delay
+loadBC(scoreTexts)                //1837: 01 CF 1D        LD      BC,$1DCF            ; Coordinate/message for drawing table"
+!loop:
+jsr ReadPriStruct                //183A: CD 56 18        CALL    ReadPriStruct       ; Get HL=coordinate, DE=message"
+bcs !exit+                //183D: D8              RET     C                    ; Out if done
+jsr PrintAdvanceText                //183E: CD 4C 18        CALL    $184C                ; Print message
+bra !loop-                //1841: C3 3A 18        JP      $183A                ; Do all in table
+!exit:
+rts
                 //;
                 //1844: C5              PUSH    BC                   ; Hold BC
                 //1845: 06 10           LD      B,$10                ; 16 bytes"
@@ -3588,35 +3576,81 @@ rts                //1740: 21 9B 20        LD      HL,$209B            ; Pointer
                 //184A: C1              POP     BC                   ; Restore BC
                 //184B: C9              RET                          ; Out
                 //;
-                //184C: C5              PUSH    BC                   ; Hold BC
-                //184D: 3A 6C 20        LD      A,(temp206C)        ; Count of 10 ..."
-                //1850: 4F              LD      C,A                  ; ... to C"
-                //1851: CD 93 0A        CALL    PrintMessageDel     ; Print the message with delay between letters
-                //1854: C1              POP     BC                   ; Restore BC
-                //1855: C9              RET                          ; Out
+PrintAdvanceText:
+lda BC                //184C: C5              PUSH    BC                   ; Hold BC
+sta PTR1
+lda BC+1
+sta PTR1+1
+lda gamevars8080.temp206C                //184D: 3A 6C 20        LD      A,(temp206C)        ; Count of 10 ..."
+sta BC                //1850: 4F              LD      C,A                  ; ... to C"
+lda #$01
+sta BC+1
+jsr PrintMessageDel                //1851: CD 93 0A        CALL    PrintMessageDel     ; Print the message with delay between letters
+lda PTR1+1                //1854: C1              POP     BC                   ; Restore BC
+sta BC+1
+lda PTR1
+sta BC
+rts                //1855: C9              RET                          ; Out
                 //
-                //ReadPriStruct:
+ReadPriStruct:                //ReadPriStruct:
                 //; Read a 4-byte print-structure pointed to by BC
                 //; HL=Screen coordiante, DE=pointer to message"
                 //; If the first byte is FF then return with Carry Set, Carry Cleared otherwise."
-                //1856: 0A              LD      A,(BC)              ; Get the screen LSB"
-                //1857: FE FF           CP      $FF                  ; Valid?
-                //1859: 37              SCF                          ; If not Carry will be Set
-                //185A: C8              RET     Z                    ; Return if 255
-                //185B: 6F              LD      L,A                  ; Screen LSB to L"
-                //185C: 03              INC     BC                   ; Next
-                //185D: 0A              LD      A,(BC)              ; Read screen MSB"
-                //185E: 67              LD      H,A                  ; Screen MSB to H"
-                //185F: 03              INC     BC                   ; Next
-                //1860: 0A              LD      A,(BC)              ; Read message LSB"
-                //1861: 5F              LD      E,A                  ; Message LSB to E"
-                //1862: 03              INC     BC                   ; Next
-                //1863: 0A              LD      A,(BC)              ; Read message MSB"
-                //1864: 57              LD      D,A                  ; Message MSB to D"
+ldy #$00
+!loop:
+lda (BC),y                //1856: 0A              LD      A,(BC)              ; Get the screen LSB"
+cmp #$ff                //1857: FE FF           CP      $FF                  ; Valid?
+sec                //1859: 37              SCF                          ; If not Carry will be Set
+beq !exit+                //185A: C8              RET     Z                    ; Return if 255
+sta HL,y                //185B: 6F              LD      L,A                  ; Screen LSB to L"
+iny                //185C: 03              INC     BC                   ; Next
+cpy #$04                //185E: 67              LD      H,A                  ; Screen MSB to H"
+bne !loop-                //185F: 03              INC     BC                   ; Next
+lda BC                //1860: 0A              LD      A,(BC)              ; Read message LSB"
+clc                //1861: 5F              LD      E,A                  ; Message LSB to E"
+adc #$04                //1862: 03              INC     BC                   ; Next
+sta BC                //1863: 0A              LD      A,(BC)              ; Read message MSB"
+clc                //1864: 57              LD      D,A                  ; Message MSB to D"
                 //1865: 03              INC     BC                   ; Next (for next print)
                 //1866: A7              AND     A                    ; Clear Carry
-                //1867: C9              RET                          ; Done
+!exit:
+rts                //1867: C9              RET                          ; Done
                 //
+MessagePlayY:                //MessagePlayY:
+.byte $0f,$0b,$00,$18                //1DAB: 0F 0B 00 18   ; ""PLAY" with normal Y"
+                //
+MessageInvaders:                //MessageInvaders:
+                //; ""SPACE  INVADERS"""
+.byte $12, $0F, $00, $02, $04, $26, $26, $08, $0D, $15, $00, $03, $04, $11, $12                //1DAF: 12 0F 00 02 04 26 26 08 0D 15 00 03 04 11 12 
+                //
+.align $100
+scoreImages:                //; Tables used to draw ""SCORE ADVANCE TABLE" information"
+.byte $1c,$11,$34,$35       //1DBE: 0E 2C 68 1D           ; Flying Saucer 52/53
+.byte $1c,$13,$2a,$2b       //1DC2: 0C 2C 20 1C           ; Alien C, sprite 0"  43/44
+.byte $1c,$15,$2c,$2d       //1DC6: 0A 2C 40 1C           ; Alien B, sprite 1"  45/46
+.byte $1c,$17,$2e,$2f       //1DCA: 08 2C 00 1C           ; Alien A, sprite 0"  47/48
+.byte $ff                   //1DCE: FF                     ; End of list
+                //;
+scoreTexts:                //AlienScoreTable:
+.byte $20, $11, <MessageMyst, >MessageMyst                //1DCF: 0E 2E E0 1D           ; ""=? MYSTERY"""
+.byte $20, $13, <Message30Pts, >Message30Pts                 //1DD3: 0C 2E EA 1D           ; ""=30 POINTS"""
+.byte $20, $15, <Message20Pts, >Message20Pts                //1DD7: 0A 2E F4 1D           ; ""=20 POINTS"""
+.byte $20, $17, <Message10Pts, >Message10Pts                //1DDB: 08 2E 99 1C           ; ""=10 POINTS"""
+.byte $ff                //1DDF: FF                     ; End of list
+                //
+MessageMyst:                //MessageMyst:
+.byte $27, $38, $26, $0C, $18, $12, $13, $04, $11, $18                //1DE0: 27 38 26 0C 18 12 13 04 11 18   ; ""=? MYSTERY"""
+                //
+Message30Pts:                //Message30Pts:
+.byte $27, $1D, $1A, $26, $0F, $0E, $08, $0D, $13, $12                //1DEA: 27 1D 1A 26 0F 0E 08 0D 13 12   ; ""=30 POINTS"""
+                //
+Message20Pts:                //Message20Pts:
+.byte $27, $1C, $1A, $26, $0F, $0E, $08, $0D, $13, $12                //1DF4: 27 1C 1A 26 0F 0E 08 0D 13 12   ; ""=20 POINTS"""
+                //
+Message10Pts:                //Message10Pts:
+.byte $27, $1B, $1A, $26, $0F, $0E, $08, $0D, $13, $12                //1C99: 27 1B 1A 26 0F 0E 08 0D 13 12    ; ""=10 POINTS"""                //
+
+
 SplashSprite:                //SplashSprite:
 break()                //; Moves a sprite up or down in splash mode. Interrupt moves the sprite. When it reaches
                 //; Y value in 20CA the flag at 20CB is raised. The image flips between two pictures every
@@ -4339,13 +4373,11 @@ InitializationDATA:                //
                 //; *..**..*
                 //1C91: 99 3C 7E 3D BC 3E 7C 99     
                 //      
-                //Message10Pts:
-                //; Ran out of space at 1DFE
-                //1C99: 27 1B 1A 26 0F 0E 08 0D 13 12    ; ""=10 POINTS"""
+
                 //
-                //MessageAdv:
+MessageAdv:                //MessageAdv:
                 //; ""*SCORE ADVANCE TABLE*"""
-                //1CA3: 28 12 02 0E 11 04 26 00                                   
+.byte $28, $12, $02, $0E, $11, $04, $26, $00, $03, $15, $00, $0D, $02, $04, $26, $13, $00, $01, $0B, $04, $28                //1CA3: 28 12 02 0E 11 04 26 00                                   
                 //1CAB: 03 15 00 0D 02 04 26 13                                   
                 //1CB3: 00 01 0B 04 28                                      
                 //
@@ -4449,8 +4481,8 @@ InitializationDATA:                //
                 //1CF8: FE  ; .*******
                 //1CF9: 90  ; ....*..*
                 //                
-                //MessagePlayUY:
-                //1CFA: 0F 0B 00 29    ; ""PLAy" with an upside down 'Y' for splash screen"
+MessagePlayUY:                //MessagePlayUY:
+.byte $0f, $0b, $00, $29                //1CFA: 0F 0B 00 29    ; ""PLAy" with an upside down 'Y' for splash screen"
                 //                       
                 //1CFE: 00 00        
                 //                             
@@ -4592,38 +4624,6 @@ InitializationDATA:                //
                 //1DA9: 40                                      
                 //1DAA: 40   
                 //                                   
-                //MessagePlayY:
-                //1DAB: 0F 0B 00 18   ; ""PLAY" with normal Y"
-                //
-                //MessageInvaders:
-                //; ""SPACE  INVADERS"""
-                //1DAF: 12 0F 00 02 04 26 26 08 0D 15 00 03 04 11 12 
-                //
-                //; Tables used to draw ""SCORE ADVANCE TABLE" information"
-                //1DBE: 0E 2C 68 1D           ; Flying Saucer
-                //1DC2: 0C 2C 20 1C           ; Alien C, sprite 0"
-                //1DC6: 0A 2C 40 1C           ; Alien B, sprite 1"
-                //1DCA: 08 2C 00 1C           ; Alien A, sprite 0"
-                //1DCE: FF                     ; End of list
-                //;
-                //AlienScoreTable:
-                //1DCF: 0E 2E E0 1D           ; ""=? MYSTERY"""
-                //1DD3: 0C 2E EA 1D           ; ""=30 POINTS"""
-                //1DD7: 0A 2E F4 1D           ; ""=20 POINTS"""
-                //1DDB: 08 2E 99 1C           ; ""=10 POINTS"""
-                //1DDF: FF                     ; End of list
-                //
-                //MessageMyst:
-                //1DE0: 27 38 26 0C 18 12 13 04 11 18   ; ""=? MYSTERY"""
-                //
-                //Message30Pts:
-                //1DEA: 27 1D 1A 26 0F 0E 08 0D 13 12   ; ""=30 POINTS"""
-                //
-                //Message20Pts:
-                //1DF4: 27 1C 1A 26 0F 0E 08 0D 13 12   ; ""=20 POINTS"""
-                //
-                //; Ran out of space here. The ""=10" message is up at 1C99. That keeps"
-                //; the font table firmly at 1E00.
                 //
                 //1DFE: 00 00 ; Padding to put font table at 1E00
                 //Text Character Sprites
@@ -4688,19 +4688,19 @@ InitializationDATA:                //
                 //                                 ; ........ ........
                 //                                 ; ........ ........
                 //
-                //MessageP1or2:
-                //1F50: 24 1B 26 0E 11 26 1C 26  ; ""<1 OR 2 PLAYERS>  """
+MessageP1or2:                //MessageP1or2:
+.byte $24, $1B, $26, $0E, $11, $26, $1C, $26, $0F, $0B, $00, $18, $04, $11, $12, $25, $26, $26                //1F50: 24 1B 26 0E 11 26 1C 26  ; ""<1 OR 2 PLAYERS>  """
                 //1F58: 0F 0B 00 18 04 11 12 25                
                 //1F60: 26 26 
                 //
-                //Message1Coin:
-                //1F62: 28 1B 26 0F 0B 00 18 04  ; ""*1 PLAYER  1 COIN """
+Message1Coin:                //Message1Coin:
+.byte $28, $1B, $26, $0F, $0B, $00, $18, $04, $11, $26, $26, $1B, $26, $02, $0E, $08, $0D, $26                 //1F62: 28 1B 26 0F 0B 00 18 04  ; ""*1 PLAYER  1 COIN """
                 //1F6A: 11 26 26 1B 26 02 0E 08 
                 //1F72: 0D 26                            
                 //
-                //DemoCommands:
+DemoCommands:                //DemoCommands:
                 //; (1=Right, 2=Left)"
-                //1F74: 01 01 00 00 01 00 02 01 00 02 01 00
+.byte 1,1,0,0,1,0,2,1,0,2,1,0                //1F74: 01 01 00 00 01 00 02 01 00 02 01 00
                 //Alien Sprite Carrying 'Y'
                 //
                 //; Small alien pushing Y back onto screen

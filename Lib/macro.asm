@@ -2,7 +2,7 @@
 
 // macro files
 #import "constants.asm"
-.label veraAddr = $0100  //: .byte 0,0,0,0
+.label veraAddr = $00fc  //: .byte 0,0,0,0
 
 // 2 byte nop 65c02
 .macro skip1Byte() {  
@@ -46,6 +46,54 @@
 	sta VERAAddrBank
 
 }
+
+.macro loadHL(number){
+    lda #<number
+    sta HL
+    lda #>number
+    sta HL+1
+
+}
+
+.macro loadDE(number){
+    lda #<number
+    sta DE
+    lda #>number
+    sta DE+1
+}
+
+.macro loadBC(number){
+    lda #<number
+    sta BC
+    lda #>number
+    sta BC+1
+}
+
+.macro saveRegs(){
+    ldx #$00
+!:
+    lda HL,x
+    sta HLstack,x
+    inx
+    cpx #$06
+    bne !-
+
+
+}
+.macro restoreRegs(){
+    ldx #$00
+!:
+    lda HLstack,x
+    sta HL,x
+    inx
+    cpx #$06
+    bne !-
+
+}
+
+
+
+
 
 .macro addressRegisterByHL(control,addressHiBit,increment,direction) {
 	
@@ -99,18 +147,19 @@
 
 .macro restoreVeraAddrInfo()
 {
-    lda veraAddr
-    sta VERACTRL
-    lda veraAddr + 1
-    sta VERAAddrLow
-    lda veraAddr + 2
-    sta VERAAddrHigh
     sta veraAddr + 3
     lda VERAAddrBank
+    lda veraAddr + 2
+    sta VERAAddrHigh
+    lda veraAddr + 1
+    sta VERAAddrLow
+    lda veraAddr
+    sta VERACTRL
 }
 
+
 .macro setDCSel(dcSel)
- {
+{
     lda VERACTRL
     and #%10000001
     ora #dcSel<<1

@@ -1,10 +1,10 @@
 #importonce 
     
-.label HL = $0004       // little endian!
-.label DE = $0006
-.label BC = $0008
-.label HLstack = $000a
-.label DEstack = $000c
-.label BCstack = $000e
-.label PTR1 = $000A
-.label PTR2 = $000C
+.label HL = $0030       // little endian!
+.label DE = $0032
+.label BC = $0034
+.label HLstack = $0036
+.label DEstack = $0038
+.label BCstack = $003a
+.label PTR1 = $003c
+.label PTR2 = $003e

@@ -1,9 +1,9 @@
 
-// 64 tilesets generated with spritemateX on 25/05/2024, 12:46:21
+// 64 tiles generated with tilemateX on 25/05/2024, 23:36:28
 
-// tileset 0, Width : 8, Height : 8, Colour Depth : 2
+// tile 0, Width : 8, Height : 8, Colour Depth : 2
 
-tileset0:
+tile0:
 .byte $00          //  ........
 .byte $10          //  ...X....
 .byte $28          //  ..X.X...
@@ -14,9 +14,9 @@ tileset0:
 .byte $44          //  .X...X..
 
 
-// tileset 1, Width : 8, Height : 8, Colour Depth : 2
+// tile 1, Width : 8, Height : 8, Colour Depth : 2
 
-tileset1:
+tile1:
 .byte $00          //  ........
 .byte $78          //  .XXXX...
 .byte $44          //  .X...X..
@@ -27,9 +27,9 @@ tileset1:
 .byte $78          //  .XXXX...
 
 
-// tileset 2, Width : 8, Height : 8, Colour Depth : 2
+// tile 2, Width : 8, Height : 8, Colour Depth : 2
 
-tileset2:
+tile2:
 .byte $00          //  ........
 .byte $38          //  ..XXX...
 .byte $44          //  .X...X..
@@ -40,9 +40,9 @@ tileset2:
 .byte $38          //  ..XXX...
 
 
-// tileset 3, Width : 8, Height : 8, Colour Depth : 2
+// tile 3, Width : 8, Height : 8, Colour Depth : 2
 
-tileset3:
+tile3:
 .byte $00          //  ........
 .byte $78          //  .XXXX...
 .byte $44          //  .X...X..
@@ -53,9 +53,9 @@ tileset3:
 .byte $78          //  .XXXX...
 
 
-// tileset 4, Width : 8, Height : 8, Colour Depth : 2
+// tile 4, Width : 8, Height : 8, Colour Depth : 2
 
-tileset4:
+tile4:
 .byte $00          //  ........
 .byte $7c          //  .XXXXX..
 .byte $40          //  .X......
@@ -66,9 +66,9 @@ tileset4:
 .byte $7c          //  .XXXXX..
 
 
-// tileset 5, Width : 8, Height : 8, Colour Depth : 2
+// tile 5, Width : 8, Height : 8, Colour Depth : 2
 
-tileset5:
+tile5:
 .byte $00          //  ........
 .byte $7c          //  .XXXXX..
 .byte $40          //  .X......
@@ -79,9 +79,9 @@ tileset5:
 .byte $40          //  .X......
 
 
-// tileset 6, Width : 8, Height : 8, Colour Depth : 2
+// tile 6, Width : 8, Height : 8, Colour Depth : 2
 
-tileset6:
+tile6:
 .byte $00          //  ........
 .byte $3c          //  ..XXXX..
 .byte $40          //  .X......
@@ -92,9 +92,9 @@ tileset6:
 .byte $3c          //  ..XXXX..
 
 
-// tileset 7, Width : 8, Height : 8, Colour Depth : 2
+// tile 7, Width : 8, Height : 8, Colour Depth : 2
 
-tileset7:
+tile7:
 .byte $00          //  ........
 .byte $44          //  .X...X..
 .byte $44          //  .X...X..
@@ -105,9 +105,9 @@ tileset7:
 .byte $44          //  .X...X..
 
 
-// tileset 8, Width : 8, Height : 8, Colour Depth : 2
+// tile 8, Width : 8, Height : 8, Colour Depth : 2
 
-tileset8:
+tile8:
 .byte $00          //  ........
 .byte $38          //  ..XXX...
 .byte $10          //  ...X....
@@ -118,9 +118,9 @@ tileset8:
 .byte $38          //  ..XXX...
 
 
-// tileset 9, Width : 8, Height : 8, Colour Depth : 2
+// tile 9, Width : 8, Height : 8, Colour Depth : 2
 
-tileset9:
+tile9:
 .byte $00          //  ........
 .byte $04          //  .....X..
 .byte $04          //  .....X..
@@ -131,9 +131,9 @@ tileset9:
 .byte $38          //  ..XXX...
 
 
-// tileset 10, Width : 8, Height : 8, Colour Depth : 2
+// tile 10, Width : 8, Height : 8, Colour Depth : 2
 
-tileset10:
+tile10:
 .byte $00          //  ........
 .byte $44          //  .X...X..
 .byte $48          //  .X..X...
@@ -144,9 +144,9 @@ tileset10:
 .byte $44          //  .X...X..
 
 
-// tileset 11, Width : 8, Height : 8, Colour Depth : 2
+// tile 11, Width : 8, Height : 8, Colour Depth : 2
 
-tileset11:
+tile11:
 .byte $00          //  ........
 .byte $40          //  .X......
 .byte $40          //  .X......
@@ -157,9 +157,9 @@ tileset11:
 .byte $7c          //  .XXXXX..
 
 
-// tileset 12, Width : 8, Height : 8, Colour Depth : 2
+// tile 12, Width : 8, Height : 8, Colour Depth : 2
 
-tileset12:
+tile12:
 .byte $00          //  ........
 .byte $44          //  .X...X..
 .byte $6c          //  .XX.XX..
@@ -170,9 +170,9 @@ tileset12:
 .byte $44          //  .X...X..
 
 
-// tileset 13, Width : 8, Height : 8, Colour Depth : 2
+// tile 13, Width : 8, Height : 8, Colour Depth : 2
 
-tileset13:
+tile13:
 .byte $00          //  ........
 .byte $44          //  .X...X..
 .byte $44          //  .X...X..
@@ -183,9 +183,9 @@ tileset13:
 .byte $44          //  .X...X..
 
 
-// tileset 14, Width : 8, Height : 8, Colour Depth : 2
+// tile 14, Width : 8, Height : 8, Colour Depth : 2
 
-tileset14:
+tile14:
 .byte $00          //  ........
 .byte $38          //  ..XXX...
 .byte $44          //  .X...X..
@@ -196,9 +196,9 @@ tileset14:
 .byte $38          //  ..XXX...
 
 
-// tileset 15, Width : 8, Height : 8, Colour Depth : 2
+// tile 15, Width : 8, Height : 8, Colour Depth : 2
 
-tileset15:
+tile15:
 .byte $00          //  ........
 .byte $78          //  .XXXX...
 .byte $44          //  .X...X..
@@ -209,9 +209,9 @@ tileset15:
 .byte $40          //  .X......
 
 
-// tileset 16, Width : 8, Height : 8, Colour Depth : 2
+// tile 16, Width : 8, Height : 8, Colour Depth : 2
 
-tileset16:
+tile16:
 .byte $00          //  ........
 .byte $38          //  ..XXX...
 .byte $44          //  .X...X..
@@ -222,9 +222,9 @@ tileset16:
 .byte $34          //  ..XX.X..
 
 
-// tileset 17, Width : 8, Height : 8, Colour Depth : 2
+// tile 17, Width : 8, Height : 8, Colour Depth : 2
 
-tileset17:
+tile17:
 .byte $00          //  ........
 .byte $78          //  .XXXX...
 .byte $44          //  .X...X..
@@ -235,9 +235,9 @@ tileset17:
 .byte $44          //  .X...X..
 
 
-// tileset 18, Width : 8, Height : 8, Colour Depth : 2
+// tile 18, Width : 8, Height : 8, Colour Depth : 2
 
-tileset18:
+tile18:
 .byte $00          //  ........
 .byte $38          //  ..XXX...
 .byte $44          //  .X...X..
@@ -248,9 +248,9 @@ tileset18:
 .byte $38          //  ..XXX...
 
 
-// tileset 19, Width : 8, Height : 8, Colour Depth : 2
+// tile 19, Width : 8, Height : 8, Colour Depth : 2
 
-tileset19:
+tile19:
 .byte $00          //  ........
 .byte $7c          //  .XXXXX..
 .byte $10          //  ...X....
@@ -261,9 +261,9 @@ tileset19:
 .byte $10          //  ...X....
 
 
-// tileset 20, Width : 8, Height : 8, Colour Depth : 2
+// tile 20, Width : 8, Height : 8, Colour Depth : 2
 
-tileset20:
+tile20:
 .byte $00          //  ........
 .byte $44          //  .X...X..
 .byte $44          //  .X...X..
@@ -274,9 +274,9 @@ tileset20:
 .byte $38          //  ..XXX...
 
 
-// tileset 21, Width : 8, Height : 8, Colour Depth : 2
+// tile 21, Width : 8, Height : 8, Colour Depth : 2
 
-tileset21:
+tile21:
 .byte $00          //  ........
 .byte $44          //  .X...X..
 .byte $44          //  .X...X..
@@ -287,9 +287,9 @@ tileset21:
 .byte $10          //  ...X....
 
 
-// tileset 22, Width : 8, Height : 8, Colour Depth : 2
+// tile 22, Width : 8, Height : 8, Colour Depth : 2
 
-tileset22:
+tile22:
 .byte $00          //  ........
 .byte $44          //  .X...X..
 .byte $44          //  .X...X..
@@ -300,9 +300,9 @@ tileset22:
 .byte $44          //  .X...X..
 
 
-// tileset 23, Width : 8, Height : 8, Colour Depth : 2
+// tile 23, Width : 8, Height : 8, Colour Depth : 2
 
-tileset23:
+tile23:
 .byte $00          //  ........
 .byte $44          //  .X...X..
 .byte $44          //  .X...X..
@@ -313,9 +313,9 @@ tileset23:
 .byte $44          //  .X...X..
 
 
-// tileset 24, Width : 8, Height : 8, Colour Depth : 2
+// tile 24, Width : 8, Height : 8, Colour Depth : 2
 
-tileset24:
+tile24:
 .byte $00          //  ........
 .byte $44          //  .X...X..
 .byte $44          //  .X...X..
@@ -326,9 +326,9 @@ tileset24:
 .byte $10          //  ...X....
 
 
-// tileset 25, Width : 8, Height : 8, Colour Depth : 2
+// tile 25, Width : 8, Height : 8, Colour Depth : 2
 
-tileset25:
+tile25:
 .byte $00          //  ........
 .byte $7c          //  .XXXXX..
 .byte $04          //  .....X..
@@ -339,9 +339,9 @@ tileset25:
 .byte $7c          //  .XXXXX..
 
 
-// tileset 26, Width : 8, Height : 8, Colour Depth : 2
+// tile 26, Width : 8, Height : 8, Colour Depth : 2
 
-tileset26:
+tile26:
 .byte $00          //  ........
 .byte $38          //  ..XXX...
 .byte $44          //  .X...X..
@@ -352,9 +352,9 @@ tileset26:
 .byte $38          //  ..XXX...
 
 
-// tileset 27, Width : 8, Height : 8, Colour Depth : 2
+// tile 27, Width : 8, Height : 8, Colour Depth : 2
 
-tileset27:
+tile27:
 .byte $00          //  ........
 .byte $10          //  ...X....
 .byte $30          //  ..XX....
@@ -365,9 +365,9 @@ tileset27:
 .byte $38          //  ..XXX...
 
 
-// tileset 28, Width : 8, Height : 8, Colour Depth : 2
+// tile 28, Width : 8, Height : 8, Colour Depth : 2
 
-tileset28:
+tile28:
 .byte $00          //  ........
 .byte $38          //  ..XXX...
 .byte $44          //  .X...X..
@@ -378,9 +378,9 @@ tileset28:
 .byte $7c          //  .XXXXX..
 
 
-// tileset 29, Width : 8, Height : 8, Colour Depth : 2
+// tile 29, Width : 8, Height : 8, Colour Depth : 2
 
-tileset29:
+tile29:
 .byte $00          //  ........
 .byte $7c          //  .XXXXX..
 .byte $04          //  .....X..
@@ -391,9 +391,9 @@ tileset29:
 .byte $38          //  ..XXX...
 
 
-// tileset 30, Width : 8, Height : 8, Colour Depth : 2
+// tile 30, Width : 8, Height : 8, Colour Depth : 2
 
-tileset30:
+tile30:
 .byte $00          //  ........
 .byte $08          //  ....X...
 .byte $18          //  ...XX...
@@ -404,9 +404,9 @@ tileset30:
 .byte $08          //  ....X...
 
 
-// tileset 31, Width : 8, Height : 8, Colour Depth : 2
+// tile 31, Width : 8, Height : 8, Colour Depth : 2
 
-tileset31:
+tile31:
 .byte $00          //  ........
 .byte $7c          //  .XXXXX..
 .byte $40          //  .X......
@@ -417,9 +417,9 @@ tileset31:
 .byte $38          //  ..XXX...
 
 
-// tileset 32, Width : 8, Height : 8, Colour Depth : 2
+// tile 32, Width : 8, Height : 8, Colour Depth : 2
 
-tileset32:
+tile32:
 .byte $00          //  ........
 .byte $1c          //  ...XXX..
 .byte $20          //  ..X.....
@@ -430,9 +430,9 @@ tileset32:
 .byte $38          //  ..XXX...
 
 
-// tileset 33, Width : 8, Height : 8, Colour Depth : 2
+// tile 33, Width : 8, Height : 8, Colour Depth : 2
 
-tileset33:
+tile33:
 .byte $00          //  ........
 .byte $7c          //  .XXXXX..
 .byte $04          //  .....X..
@@ -443,9 +443,9 @@ tileset33:
 .byte $20          //  ..X.....
 
 
-// tileset 34, Width : 8, Height : 8, Colour Depth : 2
+// tile 34, Width : 8, Height : 8, Colour Depth : 2
 
-tileset34:
+tile34:
 .byte $00          //  ........
 .byte $38          //  ..XXX...
 .byte $44          //  .X...X..
@@ -456,9 +456,9 @@ tileset34:
 .byte $38          //  ..XXX...
 
 
-// tileset 35, Width : 8, Height : 8, Colour Depth : 2
+// tile 35, Width : 8, Height : 8, Colour Depth : 2
 
-tileset35:
+tile35:
 .byte $00          //  ........
 .byte $38          //  ..XXX...
 .byte $44          //  .X...X..
@@ -469,9 +469,9 @@ tileset35:
 .byte $70          //  .XXX....
 
 
-// tileset 36, Width : 8, Height : 8, Colour Depth : 2
+// tile 36, Width : 8, Height : 8, Colour Depth : 2
 
-tileset36:
+tile36:
 .byte $00          //  ........
 .byte $08          //  ....X...
 .byte $10          //  ...X....
@@ -482,9 +482,9 @@ tileset36:
 .byte $08          //  ....X...
 
 
-// tileset 37, Width : 8, Height : 8, Colour Depth : 2
+// tile 37, Width : 8, Height : 8, Colour Depth : 2
 
-tileset37:
+tile37:
 .byte $00          //  ........
 .byte $20          //  ..X.....
 .byte $10          //  ...X....
@@ -495,9 +495,9 @@ tileset37:
 .byte $20          //  ..X.....
 
 
-// tileset 38, Width : 8, Height : 8, Colour Depth : 2
+// tile 38, Width : 8, Height : 8, Colour Depth : 2
 
-tileset38:
+tile38:
 .byte $00          //  ........
 .byte $00          //  ........
 .byte $00          //  ........
@@ -508,9 +508,9 @@ tileset38:
 .byte $00          //  ........
 
 
-// tileset 39, Width : 8, Height : 8, Colour Depth : 2
+// tile 39, Width : 8, Height : 8, Colour Depth : 2
 
-tileset39:
+tile39:
 .byte $00          //  ........
 .byte $00          //  ........
 .byte $00          //  ........
@@ -521,9 +521,9 @@ tileset39:
 .byte $00          //  ........
 
 
-// tileset 40, Width : 8, Height : 8, Colour Depth : 2
+// tile 40, Width : 8, Height : 8, Colour Depth : 2
 
-tileset40:
+tile40:
 .byte $00          //  ........
 .byte $10          //  ...X....
 .byte $54          //  .X.X.X..
@@ -534,9 +534,9 @@ tileset40:
 .byte $10          //  ...X....
 
 
-// tileset 41, Width : 8, Height : 8, Colour Depth : 2
+// tile 41, Width : 8, Height : 8, Colour Depth : 2
 
-tileset41:
+tile41:
 .byte $00          //  ........
 .byte $10          //  ...X....
 .byte $10          //  ...X....
@@ -547,9 +547,9 @@ tileset41:
 .byte $44          //  .X...X..
 
 
-// tileset 42, Width : 8, Height : 8, Colour Depth : 2
+// tile 42, Width : 8, Height : 8, Colour Depth : 2
 
-tileset42:
+tile42:
 .byte $01          //  .......X
 .byte $03          //  ......XX
 .byte $07          //  .....XXX
@@ -560,9 +560,9 @@ tileset42:
 .byte $0a          //  ....X.X.
 
 
-// tileset 43, Width : 8, Height : 8, Colour Depth : 2
+// tile 43, Width : 8, Height : 8, Colour Depth : 2
 
-tileset43:
+tile43:
 .byte $80          //  X.......
 .byte $c0          //  XX......
 .byte $e0          //  XXX.....
@@ -573,35 +573,35 @@ tileset43:
 .byte $50          //  .X.X....
 
 
-// tileset 44, Width : 8, Height : 8, Colour Depth : 2
+// tile 44, Width : 8, Height : 8, Colour Depth : 2
 
-tileset44:
+tile44:
 .byte $08          //  ....X...
-.byte $24          //  ..X..X..
-.byte $2f          //  ..X.XXXX
-.byte $3b          //  ..XXX.XX
+.byte $04          //  .....X..
+.byte $0f          //  ....XXXX
+.byte $1b          //  ...XX.XX
 .byte $3f          //  ..XXXXXX
-.byte $1f          //  ...XXXXX
-.byte $08          //  ....X...
-.byte $10          //  ...X....
+.byte $2f          //  ..X.XXXX
+.byte $28          //  ..X.X...
+.byte $06          //  .....XX.
 
 
-// tileset 45, Width : 8, Height : 8, Colour Depth : 2
+// tile 45, Width : 8, Height : 8, Colour Depth : 2
 
-tileset45:
+tile45:
 .byte $20          //  ..X.....
-.byte $48          //  .X..X...
-.byte $e8          //  XXX.X...
-.byte $b8          //  X.XXX...
+.byte $40          //  .X......
+.byte $e0          //  XXX.....
+.byte $b0          //  X.XX....
 .byte $f8          //  XXXXX...
-.byte $f0          //  XXXX....
-.byte $20          //  ..X.....
-.byte $10          //  ...X....
+.byte $e8          //  XXX.X...
+.byte $28          //  ..X.X...
+.byte $c0          //  XX......
 
 
-// tileset 46, Width : 8, Height : 8, Colour Depth : 2
+// tile 46, Width : 8, Height : 8, Colour Depth : 2
 
-tileset46:
+tile46:
 .byte $03          //  ......XX
 .byte $1f          //  ...XXXXX
 .byte $3f          //  ..XXXXXX
@@ -612,9 +612,9 @@ tileset46:
 .byte $30          //  ..XX....
 
 
-// tileset 47, Width : 8, Height : 8, Colour Depth : 2
+// tile 47, Width : 8, Height : 8, Colour Depth : 2
 
-tileset47:
+tile47:
 .byte $c0          //  XX......
 .byte $f8          //  XXXXX...
 .byte $fc          //  XXXXXX..
@@ -625,9 +625,9 @@ tileset47:
 .byte $0c          //  ....XX..
 
 
-// tileset 48, Width : 8, Height : 8, Colour Depth : 2
+// tile 48, Width : 8, Height : 8, Colour Depth : 2
 
-tileset48:
+tile48:
 .byte $00          //  ........
 .byte $10          //  ...X....
 .byte $10          //  ...X....
@@ -638,9 +638,9 @@ tileset48:
 .byte $44          //  .X...X..
 
 
-// tileset 49, Width : 8, Height : 8, Colour Depth : 2
+// tile 49, Width : 8, Height : 8, Colour Depth : 2
 
-tileset49:
+tile49:
 .byte $30          //  ..XX....
 .byte $78          //  .XXXX...
 .byte $fc          //  XXXXXX..
@@ -651,9 +651,9 @@ tileset49:
 .byte $84          //  X....X..
 
 
-// tileset 50, Width : 8, Height : 8, Colour Depth : 2
+// tile 50, Width : 8, Height : 8, Colour Depth : 2
 
-tileset50:
+tile50:
 .byte $00          //  ........
 .byte $08          //  ....X...
 .byte $08          //  ....X...
@@ -664,9 +664,9 @@ tileset50:
 .byte $23          //  ..X...XX
 
 
-// tileset 51, Width : 8, Height : 8, Colour Depth : 2
+// tile 51, Width : 8, Height : 8, Colour Depth : 2
 
-tileset51:
+tile51:
 .byte $30          //  ..XX....
 .byte $78          //  .XXXX...
 .byte $fc          //  XXXXXX..
@@ -677,9 +677,9 @@ tileset51:
 .byte $4a          //  .X..X.X.
 
 
-// tileset 52, Width : 8, Height : 8, Colour Depth : 2
+// tile 52, Width : 8, Height : 8, Colour Depth : 2
 
-tileset52:
+tile52:
 .byte $00          //  ........
 .byte $07          //  .....XXX
 .byte $1f          //  ...XXXXX
@@ -690,9 +690,9 @@ tileset52:
 .byte $10          //  ...X....
 
 
-// tileset 53, Width : 8, Height : 8, Colour Depth : 2
+// tile 53, Width : 8, Height : 8, Colour Depth : 2
 
-tileset53:
+tile53:
 .byte $00          //  ........
 .byte $e0          //  XXX.....
 .byte $f8          //  XXXXX...
@@ -703,22 +703,9 @@ tileset53:
 .byte $08          //  ....X...
 
 
-// tileset 54, Width : 8, Height : 8, Colour Depth : 2
+// tile 54, Width : 8, Height : 8, Colour Depth : 2
 
-tileset54:
-.byte $00          //  ........
-.byte $00          //  ........
-.byte $00          //  ........
-.byte $00          //  ........
-.byte $00          //  ........
-.byte $00          //  ........
-.byte $00          //  ........
-.byte $00          //  ........
-
-
-// tileset 55, Width : 8, Height : 8, Colour Depth : 2
-
-tileset55:
+tile54:
 .byte $00          //  ........
 .byte $00          //  ........
 .byte $00          //  ........
@@ -729,9 +716,22 @@ tileset55:
 .byte $00          //  ........
 
 
-// tileset 56, Width : 8, Height : 8, Colour Depth : 2
+// tile 55, Width : 8, Height : 8, Colour Depth : 2
 
-tileset56:
+tile55:
+.byte $00          //  ........
+.byte $00          //  ........
+.byte $00          //  ........
+.byte $00          //  ........
+.byte $00          //  ........
+.byte $00          //  ........
+.byte $00          //  ........
+.byte $00          //  ........
+
+
+// tile 56, Width : 8, Height : 8, Colour Depth : 2
+
+tile56:
 .byte $00          //  ........
 .byte $38          //  ..XXX...
 .byte $44          //  .X...X..
@@ -742,9 +742,9 @@ tileset56:
 .byte $10          //  ...X....
 
 
-// tileset 57, Width : 8, Height : 8, Colour Depth : 2
+// tile 57, Width : 8, Height : 8, Colour Depth : 2
 
-tileset57:
+tile57:
 .byte $00          //  ........
 .byte $01          //  .......X
 .byte $01          //  .......X
@@ -755,9 +755,9 @@ tileset57:
 .byte $3f          //  ..XXXXXX
 
 
-// tileset 58, Width : 8, Height : 8, Colour Depth : 2
+// tile 58, Width : 8, Height : 8, Colour Depth : 2
 
-tileset58:
+tile58:
 .byte $80          //  X.......
 .byte $c0          //  XX......
 .byte $c0          //  XX......
@@ -768,22 +768,9 @@ tileset58:
 .byte $fe          //  XXXXXXX.
 
 
-// tileset 59, Width : 8, Height : 8, Colour Depth : 2
+// tile 59, Width : 8, Height : 8, Colour Depth : 2
 
-tileset59:
-.byte $00          //  ........
-.byte $00          //  ........
-.byte $00          //  ........
-.byte $00          //  ........
-.byte $00          //  ........
-.byte $00          //  ........
-.byte $00          //  ........
-.byte $00          //  ........
-
-
-// tileset 60, Width : 8, Height : 8, Colour Depth : 2
-
-tileset60:
+tile59:
 .byte $00          //  ........
 .byte $00          //  ........
 .byte $00          //  ........
@@ -794,9 +781,22 @@ tileset60:
 .byte $00          //  ........
 
 
-// tileset 61, Width : 8, Height : 8, Colour Depth : 2
+// tile 60, Width : 8, Height : 8, Colour Depth : 2
 
-tileset61:
+tile60:
+.byte $00          //  ........
+.byte $00          //  ........
+.byte $00          //  ........
+.byte $00          //  ........
+.byte $00          //  ........
+.byte $00          //  ........
+.byte $00          //  ........
+.byte $00          //  ........
+
+
+// tile 61, Width : 8, Height : 8, Colour Depth : 2
+
+tile61:
 .byte $00          //  ........
 .byte $00          //  ........
 .byte $00          //  ........
@@ -807,9 +807,9 @@ tileset61:
 .byte $aa          //  X.X.X.X.
 
 
-// tileset 62, Width : 8, Height : 8, Colour Depth : 2
+// tile 62, Width : 8, Height : 8, Colour Depth : 2
 
-tileset62:
+tile62:
 .byte $00          //  ........
 .byte $00          //  ........
 .byte $00          //  ........
@@ -820,9 +820,9 @@ tileset62:
 .byte $ff          //  XXXXXXXX
 
 
-// tileset 63, Width : 8, Height : 8, Colour Depth : 2
+// tile 63, Width : 8, Height : 8, Colour Depth : 2
 
-tileset63:
+tile63:
 .byte $00          //  ........
 .byte $00          //  ........
 .byte $00          //  ........
@@ -833,6 +833,6 @@ tileset63:
 .byte $00          //  ........
 
 
-tilesetColourPallet:
+tileColourPallet:
 .byte $00, $00
 .byte $ff, $0f
