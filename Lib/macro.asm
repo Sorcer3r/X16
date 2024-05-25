@@ -1,7 +1,10 @@
 #importonce
 
+
 // macro files
 #import "constants.asm"
+#import "\c64\MySource\XInvaders8080\zeroPage.asm"
+
 .label veraAddr = $00fc  //: .byte 0,0,0,0
 
 // 2 byte nop 65c02
