@@ -1449,12 +1449,12 @@ lda #$01                //0765: 3E 01           LD      A,$01                ; T
                 //08CE: C3 A9 08        JP      $08A9                ; Back to the top of the wait loop
                 //
                 //
-                //GetShipsPerCred:
+GetShipsPerCred:                //GetShipsPerCred:
                 //; Get number of ships from DIP settings
                 //08D1: DB 02           IN      A,(INP2)            ; DIP settings"
                 //08D3: E6 03           AND     $03                  ; Get number of ships
-                //08D5: C6 03           ADD     A,$03                ; From 3-6"
-                //08D7: C9              RET                          ; Out
+lda shipsPerCred                //08D5: C6 03           ADD     A,$03                ; From 3-6"
+rts                //08D7: C9              RET                          ; Out
                 //
                 //SpeedShots:
                 //; With less than 9 aliens on the screen the alien shots get a tad bit faster. Probably
@@ -1546,11 +1546,11 @@ DrawChar:
                 //092D: C9              RET                          ; Done
                 //
                 //;=============================================================
-                //; Get number of ships for acive player
-                //092E: CD 11 16        CALL    GetPlayerDataPtr    ; HL points to player data
-                //0931: 2E FF           LD      L,$FF                ; Last byte = numbe of ships"
-                //0933: 7E              LD      A,(HL)              ; Get number of ships"
-                //0934: C9              RET                          ; Done
+getNumActiveShips:                //; Get number of ships for acive player
+jsr GetPlayerDataPtr                //092E: CD 11 16        CALL    GetPlayerDataPtr    ; HL points to player data
+dec HL                //0931: 2E FF           LD      L,$FF                ; Last byte = numbe of ships"
+lda (HL)                //0933: 7E              LD      A,(HL)              ; Get number of ships"
+rts                //0934: C9              RET                          ; Done
                 //
                 //;=============================================================
                 //; Award extra ship if score has reached ceiling
@@ -1669,9 +1669,24 @@ jmp DrawChar                //09C7: C3 FF 08        JP      DrawChar            
                 //09D2: 21 FC 20        LD      HL,$20FC            ; Else get player 2 descriptor"
                 //09D5: C9              RET                          ; Out
                 //
-                //ClearPlayField:
+ClearPlayField:                //ClearPlayField:
                 //; Clear center window of screen
-                //09D6: 21 02 24        LD      HL,$2402            ; Thrid from left, top of screen"
+loadHL($0006)                //09D6: 21 02 24        LD      HL,$2402            ; Thrid from left, top of screen"
+cpf1:
+addressRegisterByHL(0,1,1,0)
+ldx #$19
+lda #$26
+cpf2:
+sta VERADATA0
+stz VERADATA0
+dex
+bne cpf2
+inc HL+1
+lda HL+1
+cmp #$1e
+bne cpf1
+inc HL+1
+rts
                 //09D9: 36 00           LD      (HL),$00            ; Clear screen byte"
                 //09DB: 23              INC     HL                   ; Next in row
                 //09DC: 7D              LD      A,L                  ; Get X ..."
@@ -1907,16 +1922,17 @@ continueSplash:
                 //0B47: CD B6 0A        CALL    TwoSecDelay         ; Two second delay
                 //;
 playDemo:                //; Play demo
-break()               //0B4A: CD D6 09        CALL    ClearPlayField      ; Clear playfield
-lda 'd'                //0B4D: 3A FF 21        LD      A,(p1ShipsRem)      ; Number of ships for player-1"
+jsr ClearPlayField              //0B4A: CD D6 09        CALL    ClearPlayField      ; Clear playfield
+lda gamevars8080.p1ShipsRem                //0B4D: 3A FF 21        LD      A,(p1ShipsRem)      ; Number of ships for player-1"
                 //0B50: A7              AND     A                    ; If non zero ...
-                //0B51: C2 5D 0B        JP      NZ,$0B5D            ; ... keep it (counts down between demos)"
-                //0B54: CD D1 08        CALL    GetShipsPerCred     ; Get number of ships from DIP settings
-                //0B57: 32 FF 21        LD      (p1ShipsRem),A      ; Reset number of ships for player-1"
-                //0B5A: CD 7F 1A        CALL    RemoveShip          ; Remove a ship from stash and update indicators
+bne playDemo1                //0B51: C2 5D 0B        JP      NZ,$0B5D            ; ... keep it (counts down between demos)"
+jsr GetShipsPerCred                //0B54: CD D1 08        CALL    GetShipsPerCred     ; Get number of ships from DIP settings
+sta gamevars8080.p1ShipsRem                //0B57: 32 FF 21        LD      (p1ShipsRem),A      ; Reset number of ships for player-1"
+jsr RemoveShip                //0B5A: CD 7F 1A        CALL    RemoveShip          ; Remove a ship from stash and update indicators
                 //;
-                //0B5D: CD E4 01        CALL    CopyRAMMirror       ; Block copy ROM mirror to initialize RAM
-                //0B60: CD C0 01        CALL    InitAliens          ; Initialize all player 1 aliens
+playDemo1:
+jsr CopyRAMMirror                //0B5D: CD E4 01        CALL    CopyRAMMirror       ; Block copy ROM mirror to initialize RAM
+break()                //0B60: CD C0 01        CALL    InitAliens          ; Initialize all player 1 aliens
                 //0B63: CD EF 01        CALL    DrawShieldPl1       ; Draw shields for player 1 (to buffer)
                 //0B66: CD 1A 02        CALL    RestoreShields1     ; Restore shields for player 1 (to screen)
                 //0B69: 3E 01           LD      A,$01                ; ISR splash-task ..."
@@ -3234,11 +3250,11 @@ lda 'd'                //0B4D: 3A FF 21        LD      A,(p1ShipsRem)      ; Num
                 //
                 //GetPlayerDataPtr:
                 //; Set HL with 2100 if player 1 is active or 2200 if player 2 is active
-                //;
-                //1611: 2E 00           LD      L,$00                ; Byte boundary"
-                //1613: 3A 67 20        LD      A,(playerDataMSB)   ; Active player number"
-                //1616: 67              LD      H,A                  ; Set HL to data"
-                //1617: C9              RET                          ; Done
+GetPlayerDataPtr:                //;
+stz HL                //1611: 2E 00           LD      L,$00                ; Byte boundary"
+lda gamevars8080.playerDataMSB                //1613: 3A 67 20        LD      A,(playerDataMSB)   ; Active player number"
+sta HL+1                //1616: 67              LD      H,A                  ; Set HL to data"
+rts                //1617: C9              RET                          ; Done
                 //
                 //PlrFireOrDemo:
                 //; Initiate player fire if button is pressed.
@@ -3872,7 +3888,7 @@ jsr PrintP1Score                //195C: CD 25 19        CALL    $1925           
 jsr PrintP2Score                //195F: CD 2B 19        CALL    $192B                ; Print player 2 score
 jsr PrintHiScore                //1962: CD 50 19        CALL    PrintHiScore        ; Print hi score
 jsr printCreditMsg                //1965: CD 3C 19        CALL    $193C                ; Print credit lable
-jsr testchars
+//jsr testchars
 jmp DrawNumCredits                //1968: C3 47 19        JP      DrawNumCredits      ; Number of credits
                 //
                 //196B: CD DC 19        CALL    SoundBits3Off       ; From 170B with B=FB. Turn off player shot sound
@@ -3970,25 +3986,33 @@ setISRSplashTask:
                 //19E3: D3 03           OUT     (SOUND1),A          ; Change sounds"
                 //19E5: C9              RET                          ; Done
                 //
-                //DrawNumShips:
-                //; Show ships remaining in hold for the player
-                //19E6: 21 01 27        LD      HL,$2701            ; Screen coordinates"
-                //19E9: CA FA 19        JP      Z,$19FA             ; None in reserve ... skip display"
+DrawNumShips:                //DrawNumShips: r $1c c $14
+sta PTR1                //; Show ships remaining in hold for the player
+loadHL($1c14)                //19E6: 21 01 27        LD      HL,$2701            ; Screen coordinates"
+lda PTR1                //19E9: CA FA 19        JP      Z,$19FA             ; None in reserve ... skip display"
+beq clearShipLives
+addressRegisterByHL(0,1,1,0)
                 //; Draw line of ships
-                //19EC: 11 60 1C        LD      DE,$1C60            ; Player sprite"
-                //19EF: 06 10           LD      B,$10                ; 16 rows"
-                //19F1: 4F              LD      C,A                  ; Hold count"
-                //19F2: CD 39 14        CALL    DrawSimpSprite      ; Display 1byte sprite to screen
-                //19F5: 79              LD      A,C                  ; Restore remaining"
-                //19F6: 3D              DEC     A                    ; All done?
+drawLives:
+loadDE(shipChars)                //19EC: 11 60 1C        LD      DE,$1C60            ; Player sprite"
+loadBC($0502)                //19EF: 06 10           LD      B,$10                ; 16 rows"
+                    //19F1: 4F              LD      C,A                  ; Hold count"
+jsr PrintMessage                //19F2: CD 39 14        CALL    DrawSimpSprite      ; Display 1byte sprite to screen
+dec PTR1                //19F5: 79              LD      A,C                  ; Restore remaining"
+bne drawLives                //19F6: 3D              DEC     A                    ; All done?
                 //19F7: C2 EC 19        JP      NZ,$19EC            ; No ... keep going"
                 //; Clear remainder of line
-                //19FA: 06 10           LD      B,$10                ; 16 rows"
-                //19FC: CD CB 14        CALL    ClearSmallSprite    ; Clear 1byte sprite at HL
-                //19FF: 7C              LD      A,H                  ; Get Y coordinate"
-                //1A00: FE 35           CP      $35                  ; At edge?
-                //1A02: C2 FA 19        JP      NZ,$19FA            ; No ... do all"
-                //1A05: C9              RET                          ; Out
+clearShipLives:
+lda #$26                //19FA: 06 10           LD      B,$10                ; 16 rows"
+jsr printCharAtHL                //19FC: CD CB 14        CALL    ClearSmallSprite    ; Clear 1byte sprite at HL
+jsr printCharAtHL                //19FF: 7C              LD      A,H                  ; Get Y coordinate"
+lda HL                //1A00: FE 35           CP      $35                  ; At edge?
+cmp #$2a                //1A02: C2 FA 19        JP      NZ,$19FA            ; No ... do all"
+bne clearShipLives
+rts                //1A05: C9              RET                          ; Out
+shipChars:
+.byte $39,$3a
+
                 //
                 //CompYToBeam:
                 //;
@@ -4114,20 +4138,22 @@ rts                //1A3A: C9              RET                          ; Done
                 //1A7B: C2 69 1A        JP      NZ,RestoreShields   ; Do all rows"
                 //1A7E: C9              RET                          
                 //
-                //RemoveShip:
+RemoveShip:                //RemoveShip:
                 //; Remove a ship from the players stash and update the
                 //; hold indicators on the screen.
-                //1A7F: CD 2E 09        CALL    $092E                ; Get last byte from player data
-                //1A82: A7              AND     A                    ; Is it 0?
+jsr getNumActiveShips                //1A7F: CD 2E 09        CALL    $092E                ; Get last byte from player data
+beq !exit+                //1A82: A7              AND     A                    ; Is it 0?
                 //1A83: C8              RET     Z                    ; Skip
-                //1A84: F5              PUSH    AF                   ; Preserve number remaining
-                //1A85: 3D              DEC     A                    ; Remove a ship from the stash
-                //1A86: 77              LD      (HL),A              ; New number of ships"
-                //1A87: CD E6 19        CALL    DrawNumShips        ; Draw the line of ships
-                //1A8A: F1              POP     AF                   ; Restore number
-                //1A8B: 21 01 25        LD      HL,$2501            ; Screen coordinates"
+pha                //1A84: F5              PUSH    AF                   ; Preserve number remaining
+dec                //1A85: 3D              DEC     A                    ; Remove a ship from the stash
+sta (HL)                //1A86: 77              LD      (HL),A              ; New number of ships"
+jsr DrawNumShips                //1A87: CD E6 19        CALL    DrawNumShips        ; Draw the line of ships
+pla                //1A8A: F1              POP     AF                   ; Restore number
+loadHL($1e06)                //1A8B: 21 01 25        LD      HL,$2501            ; Screen coordinates"
                 //1A8E: E6 0F           AND     $0F                  ; Make sure it is a digit
-                //1A90: C3 C5 09        JP      $09C5                ; Print number remaining
+jmp printCharAtHL                //1A90: C3 C5 09        JP      $09C5                ; Print number remaining
+!exit:
+rts
                 //Data From Here Down
                 //1A93: 00 00       
                 //
@@ -4188,7 +4214,7 @@ InitializationDATA:                //
 .byte  $00, $00, $02, <GameObj2, >GameObj2, $00, $00, $00, $00, $00, $04, $EE, $1C, $00, $00, $03    //gameobj2 data           //1B30: 00 00 02 76 04 00 00 00 00 00 04 EE 1C 00 00 03    
 .byte  $00, $00, $00, <GameObj3, >GameObj3, $00, $00, $01, $00, $1D, $04, $E2, $1C, $00, $00, $03    //gameobj3 data          //1B40: 00 00 00 B6 04 00 00 01 00 1D 04 E2 1C 00 00 03 
 .byte  $00, $00, $00, <GameObj4, >GameObj4, $00, $00, $01, $06, $1D, $04, $D0, $1C, $00, $00, $03    //gameobj4 data          //1B50: 00 00 00 82 06 00 00 01 06 1D 04 D0 1C 00 00 03
-.byte  $FF, $00, $C0, $1C, $00, $00, $10, $21, $01, $00, $30, $00, $12, $00, $00, $00              //1B60: FF 00 C0 1C 00 00 10 21 01 00 30 00 12 00 00 00         
+.byte  $FF, $00, $C0, $1C, $00, $00, $10, >gamevars8080.P1Data, $01, $00, $30, $00, $12, $00, $00, $00              //1B60: FF 00 C0 1C 00 00 10 21 01 00 30 00 12 00 00 00         
                 //
                 //; These don't need to be copied over to RAM (see 1BA0 below).
                 //MesssageP1:
@@ -4796,66 +4822,7 @@ MessageCredit:                //MessageCredit:
                 //1FF3: 0F 14 12 07 26             ; ""PUSH " (with space on the end)"
                 //
                 //1FF8: 00 08 08 08 08 08 00 00                ; 3F:""-"""
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
-                //
+shipsPerCred: 
+.byte $03
+
 }
