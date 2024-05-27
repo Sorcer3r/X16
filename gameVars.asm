@@ -3,7 +3,7 @@
 // all game variables
 
 .const SPRITEALIENBASE = $13000
-.const SPRITESHOTBASE = SPRITEALIENBASE + (64*12)           // add alien size * num alien images
+.const SPRITESHOTBASE = SPRITEALIENBASE + (64*14)           // add alien size * num alien images
 .const SPRITESHIELDBASE = SPRITESHOTBASE + (32*15)         // add shot size * num shot images 
 .const SPRITESPACESHIPBASE = SPRITESHIELDBASE + (32 * 24)   // add$ shield size * num shield images 
 .const PALETTEBASE = $1FA00

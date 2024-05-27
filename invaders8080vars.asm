@@ -9,8 +9,8 @@ expAlienTimer:	    .byte	0	//2003 Time (ISR ticks) left in alien-explosion
 alienRow:	        .byte	0	//2004 Row number of current alien (cursor)
 alienFrame:	        .byte	0	//2005 Animation frame number (0 or 1) for current alien (cursor)
 alienCurIndex:	    .byte	0	//2006 Alien cursor index (from 0 to 54)
-refAlienDYr:	    .byte	0	//2007 Reference alien delta Yr
-refAlienDXr:	    .byte	0	//2008 Reference alien deltaXr
+refAlienDYr:	    .byte	0	//2007 Reference alien delta Xr
+refAlienDXr:	    .byte	0	//2008 Reference alien delta Yr
 refAlienYr:	        .byte	0	//2009 Reference alien Yr coordinate
 refAlienXr:	        .byte	0	//200A Reference alien Xr coordinate
 alienPosLSB:	    .byte	0	//200B Alien cursor bit pos (LSB)
@@ -158,7 +158,7 @@ soundPort5:	        .byte	0	//2098 Current status of sound port (out $05)
 extraHold:	        .byte	0	//2099 Duration counter for extra-ship sound
 tilt:	            .byte	0	//209A 1 if tilt handling is in progress
 fleetSndHold:	    .byte	0	//209B Time to hold fleet-sound at each change
-                    .fill $24,0 //209C-20BF unused bytes went here
+                    .fill $24,0            //209C-20BF unused bytes went here
 isrDelay:	        .byte	0	//20C0 Delay counter decremented in ISR
 isrSplashTask:	    .byte	0	//20C1 1=In demo, 2=Little-alien and Y, 4=shooting extra 'C'"
 splashAnForm:	    .byte	0	//20C2 Image form (increments each draw)

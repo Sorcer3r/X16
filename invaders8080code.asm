@@ -5,6 +5,7 @@
 #import "invaders8080vars.asm"
 #import "Lib\macro.asm"
 #import "screen.asm"
+#import "SpriteArray.asm"
 
 inv8080:{
 reset:                //Reset: 
@@ -334,21 +335,26 @@ rts                //0141: 3A 68 20        LD      A,(playerOK)        ; Is the 
                 //01D3: 21 02 24        LD      HL,$2402            ; Screen coordinates (3rd byte from upper left)"
                 //01D6: C3 CC 14        JP      $14CC                ; Draw line down left side
                 //
-                //AddDelta:
+AddDelta:                //AddDelta:
                 //; HL points to descriptor: DX DY XX YY except DX is already loaded in C
                 //; ** Why the ""already loaded" part? Why not just load it here?"
                 //;
-                //01D9: 23              INC     HL                   ; We loaded delta-x already ... skip over it
-                //01DA: 46              LD      B,(HL)              ; Get delta-y"
-                //01DB: 23              INC     HL                   ; Skip over it
-                //01DC: 79              LD      A,C                  ; Add delta-x ..."
-                //01DD: 86              ADD     A,(HL)              ; ... to x"
-                //01DE: 77              LD      (HL),A              ; Store new x"
-                //01DF: 23              INC     HL                   ; Skip to y
-                //01E0: 78              LD      A,B                  ; Add delta-y ..."
-                //01E1: 86              ADD     A,(HL)              ; ... to y"
-                //01E2: 77              LD      (HL),A              ; Store new y"
-                //01E3: C9              RET                          ; Done
+
+sta PTR1    // DX
+inc HL                //01D9: 23              INC     HL                   ; We loaded delta-x already ... skip over it
+lda (HL)                //01DA: 46              LD      B,(HL)              ; Get delta-y"
+sta PTR2    //dy
+inc HL                //01DB: 23              INC     HL                   ; Skip over it
+lda PTR1                //01DC: 79              LD      A,C                  ; Add delta-x ..."
+clc                //01DD: 86              ADD     A,(HL)              ; ... to x"
+adc (HL)
+sta (HL)                //01DE: 77              LD      (HL),A              ; Store new x"
+inc HL                //01DF: 23              INC     HL                   ; Skip to y
+lda PTR2                    //01E0: 78              LD      A,B                  ; Add delta-y ..."
+clc                //01E1: 86              ADD     A,(HL)              ; ... to y"
+adc (HL)
+sta (HL)                //01E2: 77              LD      (HL),A              ; Store new y"
+rts                //01E3: C9              RET                          ; Done
                 //
                 //CopyRAMMirror:
                 //; Block copy ROM mirror 1B00-1BBF to initialize RAM at 2000-20BF.
@@ -1671,10 +1677,10 @@ jmp DrawChar                //09C7: C3 FF 08        JP      DrawChar            
                 //
 ClearPlayField:                //ClearPlayField:
                 //; Clear center window of screen
-loadHL($0006)                //09D6: 21 02 24        LD      HL,$2402            ; Thrid from left, top of screen"
+loadHL($040c)                //09D6: 21 02 24        LD      HL,$2402            ; Thrid from left, top of screen"
 cpf1:
 addressRegisterByHL(0,1,1,0)
-ldx #$19
+ldx #$38
 lda #$26
 cpf2:
 sta VERADATA0
@@ -1683,7 +1689,7 @@ dex
 bne cpf2
 inc HL+1
 lda HL+1
-cmp #$1e
+cmp #$1c
 bne cpf1
 inc HL+1
 rts
@@ -1780,17 +1786,17 @@ rts
                 //0A7C: 21 62 20        LD      HL,$2062            ; Return exploding-alien descriptor"
                 //0A7F: C9              RET                          ; Out
                 //
-                //Animate:
+Animate:                //Animate:
                 //; Start the ISR moving the sprite. Return when done.
-                //0A80: 3E 02           LD      A,$02                ; Start simple linear ..."
-                //0A82: 32 C1 20        LD      (isrSplashTask),A   ; ... sprite animation (splash)"
-                //0A85: D3 06           OUT     (WATCHDOG),A        ; Feed watchdog"
-                //0A87: 3A CB 20        LD      A,(splashReached)   ; Has the ..."
+lda #$02                //0A80: 3E 02           LD      A,$02                ; Start simple linear ..."
+sta gamevars8080.isrSplashTask                //0A82: 32 C1 20        LD      (isrSplashTask),A   ; ... sprite animation (splash)"
+!wait:                //0A85: D3 06           OUT     (WATCHDOG),A        ; Feed watchdog"
+lda gamevars8080.splashReached                //0A87: 3A CB 20        LD      A,(splashReached)   ; Has the ..."
                 //0A8A: A7              AND     A                    ; ... sprite reached target?
-                //0A8B: CA 85 0A        JP      Z,$0A85             ; No ... wait"
+beq !wait-                //0A8B: CA 85 0A        JP      Z,$0A85             ; No ... wait"
                 //0A8E: AF              XOR     A                    ; Stop ...
-                //0A8F: 32 C1 20        LD      (isrSplashTask),A   ; ... ISR animation"
-                //0A92: C9              RET                          ; Done
+stz gamevars8080.isrSplashTask                //0A8F: 32 C1 20        LD      (isrSplashTask),A   ; ... ISR animation"
+rts                //0A92: C9              RET                          ; Done
                 //
 PrintMessageDel:                //PrintMessageDel:
                 //; Print message from DE to screen at HL (length in C) with a
@@ -1869,11 +1875,11 @@ sta gamevars8080.isrDelay                //0AD7: 32 C0 20        LD      (isrDel
 bne !-                //0ADE: C2 DA 0A        JP      NZ,$0ADA            ; No ... wait on it"
 rts                //0AE1: C9              RET                          ; Out
                 //
-                //IniSplashAni:
+IniSplashAni:                //IniSplashAni:
                 //; Init the splash-animation block
-                //0AE2: 21 C2 20        LD      HL,$20C2            ; The splash-animation descriptor"
-                //0AE5: 06 0C           LD      B,$0C                ; C bytes"
-                //0AE7: C3 32 1A        JP      BlockCopy           ; Block copy DE to descriptor
+loadHL(gamevars8080.splashAnForm)               //0AE2: 21 C2 20        LD      HL,$20C2            ; The splash-animation descriptor"
+loadBC($0c00)                //0AE5: 06 0C           LD      B,$0C                ; C bytes"
+jmp BlockCopy                //0AE7: C3 32 1A        JP      BlockCopy           ; Block copy DE to descriptor
                 //
                 //;=============================================================
 afterIniSplash:                //; After initialization ... splash screens
@@ -1902,25 +1908,37 @@ continueSplash:
     jsr TwoSecDelay            //0B14: CD B6 0A        CALL    TwoSecDelay         ; Two second delay
     lda gamevars8080.splashAnimate           //0B17: 3A EC 20        LD      A,(splashAnimate)   ; Do splash ..."
                 //0B1A: A7              AND     A                    ; ... animations?
-    bne playDemo            //0B1B: C2 4A 0B        JP      NZ,$0B4A            ; Not 0 ... no animations"
+    beq ContSplash2
+    jmp playDemo            //0B1B: C2 4A 0B        JP      NZ,$0B4A            ; Not 0 ... no animations"
                 //;
                 //; Animate small alien replacing upside-down Y with correct Y
-    break()            //0B1E: 11 95 1A        LD      DE,$1A95            ; Animate sprite from Y=FE to Y=9E step -1"
-    lda 'y'            //0B21: CD E2 0A        CALL    IniSplashAni        ; Copy to splash-animate structure
-                //0B24: CD 80 0A        CALL    Animate             ; Wait for ISR to move sprite (small alien)
-                //0B27: 11 B0 1B        LD      DE,$1BB0            ; Animate sprite from Y=98 to Y=FF step 1"
-                //0B2A: CD E2 0A        CALL    IniSplashAni        ; Copy to splash-animate structure
-                //0B2D: CD 80 0A        CALL    Animate             ; Wait for ISR to move sprite (alien pulling upside down Y)
-                //0B30: CD B1 0A        CALL    OneSecDelay         ; One second delay
-                //0B33: 11 C9 1F        LD      DE,$1FC9            ; Animate sprite from Y=FF to Y=97 step 1"
-                //0B36: CD E2 0A        CALL    IniSplashAni        ; Copy to splash-animate structure
-                //0B39: CD 80 0A        CALL    Animate             ; Wait for ISR to move sprite (alien pushing Y)
-                //0B3C: CD B1 0A        CALL    OneSecDelay         ; One second delay
+    ContSplash2:
+    loadDE(SplashAni1Struct)            //0B1E: 11 95 1A        LD      DE,$1A95            ; Animate sprite from Y=FE to Y=9E step -1"
+    jsr IniSplashAni            //0B21: CD E2 0A        CALL    IniSplashAni        ; Copy to splash-animate structure
+    jsr Animate            //0B24: CD 80 0A        CALL    Animate             ; Wait for ISR to move sprite (small alien)
+    loadHL($082a)
+    lda #$26        // space
+    jsr DrawChar
+    loadDE(SplashAni2Struct)            //0B27: 11 B0 1B        LD      DE,$1BB0            ; Animate sprite from Y=98 to Y=FF step 1"
+    jsr IniSplashAni            //0B2A: CD E2 0A        CALL    IniSplashAni        ; Copy to splash-animate structure
+    jsr Animate            //0B2D: CD 80 0A        CALL    Animate             ; Wait for ISR to move sprite (alien pulling upside down Y)
+    addressRegister(0,$1fc06,1,0)
+    stz VERADATA0
+    jsr OneSecDelay            //0B30: CD B1 0A        CALL    OneSecDelay         ; One second delay
+    loadDE(SplashAni3Struct)            //0B33: 11 C9 1F        LD      DE,$1FC9            ; Animate sprite from Y=FF to Y=97 step 1"
+    jsr IniSplashAni            //0B36: CD E2 0A        CALL    IniSplashAni        ; Copy to splash-animate structure
+    jsr Animate            //0B39: CD 80 0A        CALL    Animate             ; Wait for ISR to move sprite (alien pushing Y)
+    jsr OneSecDelay            //0B3C: CD B1 0A        CALL    OneSecDelay         ; One second delay
+    loadHL($082a)
+    lda #$18 //Y
+    jsr DrawChar
+    addressRegister(0,$1fc06,1,0)
+    stz VERADATA0               //turn sprite off
                 //0B3F: 21 B7 33        LD      HL,$33B7            ; Where the splash alien ends up"
                 //0B42: 06 0A           LD      B,$0A                ; 10 rows"
                 //0B44: CD CB 14        CALL    ClearSmallSprite    ; Clear a one byte sprite at HL
-                //0B47: CD B6 0A        CALL    TwoSecDelay         ; Two second delay
-                //;
+    jsr TwoSecDelay            //0B47: CD B6 0A        CALL    TwoSecDelay         ; Two second delay
+    break()            //;
 playDemo:                //; Play demo
 jsr ClearPlayField              //0B4A: CD D6 09        CALL    ClearPlayField      ; Clear playfield
 lda gamevars8080.p1ShipsRem                //0B4D: 3A FF 21        LD      A,(p1ShipsRem)      ; Number of ships for player-1"
@@ -1931,6 +1949,7 @@ sta gamevars8080.p1ShipsRem                //0B57: 32 FF 21        LD      (p1Sh
 jsr RemoveShip                //0B5A: CD 7F 1A        CALL    RemoveShip          ; Remove a ship from stash and update indicators
                 //;
 playDemo1:
+jsr TwoSecDelay
 jsr CopyRAMMirror                //0B5D: CD E4 01        CALL    CopyRAMMirror       ; Block copy ROM mirror to initialize RAM
 break()                //0B60: CD C0 01        CALL    InitAliens          ; Initialize all player 1 aliens
                 //0B63: CD EF 01        CALL    DrawShieldPl1       ; Draw shields for player 1 (to buffer)
@@ -1992,9 +2011,9 @@ break()                //0B60: CD C0 01        CALL    InitAliens          ; Ini
                 //0BF1: CD 0A 19        CALL    PlyrShotAndBump     ; Check if player is shot and aliens bumping the edge of screen
                 //0BF4: C3 9A 19        JP      CheckHiddenMes      ; Check for hidden-message display sequence
                 //
-                //MessageCorp:
+MessageCorp:                //MessageCorp:
                 //; ""TAITO COP"""
-                //0BF7: 13 00 08 13 0E 26 02 0E 0F
+.byte $13, $00, $08, $13, $0E, $26, $02, $0E, $0F                //0BF7: 13 00 08 13 0E 26 02 0E 0F
                 //Diagnostics Routine
                 //The very center 2K of the code map is an expansion area. It originally contained a 1K diagnostics routine beginning at 1000. The original code would check bit 0 of port 0 (wired to DIP4) and jump to this routine if the switch was flipped. The routine was removed in this Midway version of the code. And it was removed in later versions of the TAITO code line.
                 //The original routine is shown here for reference.
@@ -3668,22 +3687,47 @@ Message10Pts:                //Message10Pts:
 
 
 SplashSprite:                //SplashSprite:
-break()                //; Moves a sprite up or down in splash mode. Interrupt moves the sprite. When it reaches
+                //; Moves a sprite up or down in splash mode. Interrupt moves the sprite. When it reaches
                 //; Y value in 20CA the flag at 20CB is raised. The image flips between two pictures every
                 //; 4 movements.
-                //
-                //1868: 21 C2 20        LD      HL,$20C2            ; Descriptor"
-                //186B: 34              INC     (HL)                 ; Change image
-                //186C: 23              INC     HL                   ; Point to delta-x
-                //186D: 4E              LD      C,(HL)              ; Get delta-x"
-                //186E: CD D9 01        CALL    AddDelta            ; Add delta-X and delta-Y to X and Y
-                //1871: 47              LD      B,A                  ; Current y coordinate"
-                //1872: 3A CA 20        LD      A,(splashTargetY)   ; Has sprite reached ..."
+                //00 00 FF B8 FE 20 1C 10 9E 00 20 1C 
+addressRegister(0,$1fc00,1,0)
+
+loadHL(gamevars8080.splashAnForm)               //1868: 21 C2 20        LD      HL,$20C2            ; Descriptor"
+inc gamevars8080.splashAnForm
+                                           //186B: 34              INC     (HL)                 ; Change image
+inc HL                      //186C: 23              INC     HL                   ; Point to delta-x
+lda (HL)                //186D: 4E              LD      C,(HL)              ; Get delta-x"
+jsr AddDelta                //186E: CD D9 01        CALL    AddDelta            ; Add delta-X and delta-Y to X and Y
+                // add delta returns with yr in a                //1871: 47              LD      B,A                  ; Current y coordinate"
+cmp gamevars8080.splashTargetY                //1872: 3A CA 20        LD      A,(splashTargetY)   ; Has sprite reached ..."
                 //1875: B8              CP      B                    ; ... target coordinate?
-                //1876: CA 98 18        JP      Z,$1898             ; Yes ... flag and out"
-                //1879: 3A C2 20        LD      A,(splashAnForm)    ; Image number"
-                //187C: E6 04           AND     $04                  ; Watching bit 3 for flip delay
-                //187E: 2A CC 20        LD      HL,(splashImRestLSB); Image"
+beq atDest                //1876: CA 98 18        JP      Z,$1898             ; Yes ... flag and out"
+
+ldx gamevars8080.splashImageLSB
+lda gamevars8080.splashAnForm                //1879: 3A C2 20        LD      A,(splashAnForm)    ; Image number"
+and #$04                //187C: E6 04           AND     $04                  ; Watching bit 3 for flip delay
+bne splashImage1                //187E: 2A CC 20        LD      HL,(splashImRestLSB); Image"
+ldx gamevars8080.splashImageMSB
+splashImage1:
+lda SpriteArray.addressTableLo,x
+sta VERADATA0
+lda SpriteArray.addressTableHi,x
+sta VERADATA0
+lda gamevars8080.splashXr
+clc
+adc #$30
+sta VERADATA0
+lda #$00
+adc #$00
+sta VERADATA0
+lda gamevars8080.splashYr
+sta VERADATA0
+stz VERADATA0
+lda #%00001100
+sta VERADATA0
+lda #%00010000
+sta VERADATA0
                 //1881: C2 88 18        JP      NZ,$1888            ; Did bit 3 go to 0? No ... keep current image"
                 //1884: 11 30 00        LD      DE,$0030            ; 16*3 ..."
                 //1887: 19              ADD     HL,DE                ; ...  use other image form"
@@ -3691,13 +3735,14 @@ break()                //; Moves a sprite up or down in splash mode. Interrupt m
                 //188B: 21 C5 20        LD      HL,$20C5            ; X,Y,Image descriptor"
                 //188E: CD 3B 1A        CALL    ReadDesc            ; Read sprite descriptor
                 //1891: EB              EX      DE,HL                ; Image to DE, position to HL"
-                //1892: C3 D3 15        JP      DrawSprite          ; Draw the sprite
+rts                //1892: C3 D3 15        JP      DrawSprite          ; Draw the sprite
                 //
                 //1895: 00 00 00                           
                 //
-                //1898: 3E 01           LD      A,$01                ; Flag that sprite ..."
-                //189A: 32 CB 20        LD      (splashReached),A   ; ... reached location"
-                //189D: C9              RET                          ; Out
+atDest:
+lda #$01                //1898: 3E 01           LD      A,$01                ; Flag that sprite ..."
+sta gamevars8080.splashReached                //189A: 32 CB 20        LD      (splashReached),A   ; ... reached location"
+rts                //189D: C9              RET                          ; Out
                 //
                 //;Animate alien shot to extra ""C" in splash"
                 //189E: 21 50 20        LD      HL,$2050            ; Task descriptor for game object 4 (squiggly shot)"
@@ -3732,6 +3777,11 @@ jsr DrawStatus                //18DC: CD 56 19        CALL    DrawStatus        
                 //;
 lda #$08                //18DF: 3E 08           LD      A,$08                ; Set alien ..."
 sta gamevars8080.aShotReloadRate               //18E1: 32 CF 20        LD      (aShotReloadRate),A ; ... shot reload rate"
+//testing
+//lda #0
+//sta gamevars8080.isrSplashTask
+//stz gamevars8080.splashAnimate
+
 jmp afterIniSplash                //18E4: C3 EA 0A        JP      $0AEA                ; Top of splash screen loop
                 //
                 //; Get player-alive flag for OTHER player
@@ -3965,18 +4015,18 @@ setISRSplashTask:
                 //19BE: 28 13 00 08 13 0E 26 02 0E 11 0F 0E 11      
                 //19CB: 00 13 08 0E 0D 28
                 //
-                //EnableGameTasks:
+EnableGameTasks:                //EnableGameTasks:
                 //; Enable ISR game tasks
-                //19D1: 3E 01           LD      A,$01                ; Set ISR ..."
-                //19D3: 32 E9 20        LD      (suspendPlay),A     ; ... game tasks enabled"
-                //19D6: C9              RET                          ; Done
+lda #$01                //19D1: 3E 01           LD      A,$01                ; Set ISR ..."
+sta gamevars8080.suspendPlay                //19D3: 32 E9 20        LD      (suspendPlay),A     ; ... game tasks enabled"
+rts                //19D6: C9              RET                          ; Done
                 //
                 //DsableGameTasks:
                 //; Disable ISR game tasks
                 //; Clear 20E9 flag
                 //19D7: AF              XOR     A                    ; Clear ISR game tasks flag
-                //19D8: C3 D3 19        JP      $19D3                ; Save a byte (the RET)
-                //19DB: 00                                            ; ** Here is the byte saved. I wonder if this was an optimizer pass.
+stz gamevars8080.suspendPlay                //19D8: C3 D3 19        JP      $19D3                ; Save a byte (the RET)
+rts                //19DB: 00                                            ; ** Here is the byte saved. I wonder if this was an optimizer pass.
                 //
                 //SoundBits3Off:
                 //; Turn off bit in sound port
@@ -3988,27 +4038,31 @@ setISRSplashTask:
                 //
 DrawNumShips:                //DrawNumShips: r $1c c $14
 sta PTR1                //; Show ships remaining in hold for the player
-loadHL($1c14)                //19E6: 21 01 27        LD      HL,$2701            ; Screen coordinates"
+loadHL($1c12)                //19E6: 21 01 27        LD      HL,$2701            ; Screen coordinates"
 lda PTR1                //19E9: CA FA 19        JP      Z,$19FA             ; None in reserve ... skip display"
 beq clearShipLives
-addressRegisterByHL(0,1,1,0)
                 //; Draw line of ships
-drawLives:
 loadDE(shipChars)                //19EC: 11 60 1C        LD      DE,$1C60            ; Player sprite"
+drawLives:
 loadBC($0502)                //19EF: 06 10           LD      B,$10                ; 16 rows"
                     //19F1: 4F              LD      C,A                  ; Hold count"
 jsr PrintMessage                //19F2: CD 39 14        CALL    DrawSimpSprite      ; Display 1byte sprite to screen
+inc HL
+inc HL
+inc HL
+inc HL
 dec PTR1                //19F5: 79              LD      A,C                  ; Restore remaining"
 bne drawLives                //19F6: 3D              DEC     A                    ; All done?
                 //19F7: C2 EC 19        JP      NZ,$19EC            ; No ... keep going"
                 //; Clear remainder of line
 clearShipLives:
 lda #$26                //19FA: 06 10           LD      B,$10                ; 16 rows"
-jsr printCharAtHL                //19FC: CD CB 14        CALL    ClearSmallSprite    ; Clear 1byte sprite at HL
-jsr printCharAtHL                //19FF: 7C              LD      A,H                  ; Get Y coordinate"
+jsr DrawChar                //19FC: CD CB 14        CALL    ClearSmallSprite    ; Clear 1byte sprite at HL
+lda #$26
+jsr DrawChar                //19FF: 7C              LD      A,H                  ; Get Y coordinate"
 lda HL                //1A00: FE 35           CP      $35                  ; At edge?
 cmp #$2a                //1A02: C2 FA 19        JP      NZ,$19FA            ; No ... do all"
-bne clearShipLives
+bcc clearShipLives
 rts                //1A05: C9              RET                          ; Out
 shipChars:
 .byte $39,$3a
@@ -4148,8 +4202,8 @@ pha                //1A84: F5              PUSH    AF                   ; Preser
 dec                //1A85: 3D              DEC     A                    ; Remove a ship from the stash
 sta (HL)                //1A86: 77              LD      (HL),A              ; New number of ships"
 jsr DrawNumShips                //1A87: CD E6 19        CALL    DrawNumShips        ; Draw the line of ships
+loadHL($1c0e)                //1A8B: 21 01 25        LD      HL,$2501            ; Screen coordinates"
 pla                //1A8A: F1              POP     AF                   ; Restore number
-loadHL($1e06)                //1A8B: 21 01 25        LD      HL,$2501            ; Screen coordinates"
                 //1A8E: E6 0F           AND     $0F                  ; Make sure it is a digit
 jmp printCharAtHL                //1A90: C3 C5 09        JP      $09C5                ; Print number remaining
 !exit:
@@ -4168,7 +4222,9 @@ rts
                 //; 9E   Target Y coordiante
                 //; 00   Reached Y flag
                 //; 1C20 Base iamge (small alien)
-                //1A95: 00 00 FF B8 FE 20 1C 10 9E 00 20 1C   
+SplashAni1Struct:
+.byte $00, $00, $FF, $40, $FF, $00, $01, $10, $7A, $00, $20, $1C                  //1A95: 00 00 FF B8 FE 20 1C 10 9E 00 20 1C   
+    //changed bytes 5/6 to sprite image numbers for alien
                 //
                 //ShotReloadRate:
                 //; The tables at 1CB8 and 1AA1 control how fast shots are created. The speed is based
@@ -4182,21 +4238,21 @@ rts
                 //1AA1: 30 10 0B 08                            
                 //1AA5: 07           ; Fastest shot firing speed
                 //
-                //MessageGOver:
+MessageGOver:                //MessageGOver:
                 //; GAME OVER PLAYER< >"""
-                //1AA6: 06 00 0C 04 26 0E 15 04 11 26 26 0F   
-                //1AB2: 0B 00 18 04 11 24 26 25                
+.byte $06, $00, $0C, $04, $26, $0E, $15, $04, $11, $26, $26, $0F               //1AA6: 06 00 0C 04 26 0E 15 04 11 26 26 0F   
+.byte $0B, $00, $18, $04, $11, $24, $26, $25               //1AB2: 0B 00 18 04 11 24 26 25                
                 //
-                //MessageB1or2:
+MessageB1or2:                //MessageB1or2:
                 //; ""1 OR 2PLAYERS BUTTON"""
-                //1ABA: 1B 26 0E 11 26 1C 0F 0B 00 18 04      
-                //1AC5: 11 12 26 01 14 13 13 0E 0D 26
+.byte $1B, $26, $0E, $11, $26, $1C, $0F, $0B, $00, $18, $04               //1ABA: 1B 26 0E 11 26 1C 0F 0B 00 18 04      
+.byte $11, $12, $26, $01, $14, $13, $13, $0E, $0D, $26               //1AC5: 11 12 26 01 14 13 13 0E 0D 26
                 //
-                //Message1Only:
+Message1Only:                //Message1Only:
                 //; ""ONLY 1PLAYER BUTTON """
                 //; Note the space on the end ... both alternatives are same length
-                //1ACF: 0E 0D 0B 18 26 1B 0F 0B 00 18 04 11 26 26 
-                //1ADD: 01 14 13 13 0E 0D 26                   
+.byte $0E, $0D, $0B, $18, $26, $1B, $0F, $0B, $00, $18, $04, $11, $26, $26               //1ACF: 0E 0D 0B 18 26 1B 0F 0B 00 18 04 11 26 26 
+.byte $01, $14, $13, $13, $0E, $0D, $26               //1ADD: 01 14 13 13 0E 0D 26                   
                 //
 MessageScore:                //MessageScore:
                 //; " SCORE<1> HI-SCORE SCORE<2>"""
@@ -4249,7 +4305,9 @@ InitializationDATA:                //
                 //; ........
 .byte  $00, $03, $04, $78, $14, $13, $08, $1A, $3D, $68, $FC, $FC, $68, $3D, $1A, $00               //1BA0: 00 03 04 78 14 13 08 1A 3D 68 FC FC 68 3D 1A 00                                      
                 //
-.byte  $00, $00, $01, $B8, $98, $A0, $1B, $10, $FF, $00, $A0, $1B, $00, $00, $00, $00              //1BB0: 00 00 01 B8 98 A0 1B 10 FF 00 A0 1B 00 00 00 00                                      
+SplashAni2Struct:
+.byte  $00, $00, $01, $40, $78, $0a, $0b, $10, $FF, $00, $A0, $1B, $00, $00, $00, $00              //1BB0: 00 00 01 B8 98 A0 1B 10 FF 00 A0 1B 00 00 00 00                                      
+                               //changed byte 5/6 to sprite image numbers     
                 //;--------------------------- End of initialization copy -------------------------
                 //
                 //
@@ -4750,10 +4808,10 @@ DemoCommands:                //DemoCommands:
                 //                 
                 //1F80: 60 10 0F 10 60 30 18 1A 3D 68 FC FC 68 3D 1A 00                
                 //
-                //MessageCoin:
+MessageCoin:                //MessageCoin:
                 //1F90: 08 0D 12 04 11 13 26 26 02 0E 08 0D   ; ""INSERT  COIN"""
                 //                           
-                //CreditTable:
+CreditTable:                //CreditTable:
                 //1F9C: 0D 2A 50 1F                  ; ""<1 OR 2 PLAYERS>  " to screen at 2A0D"
                 //1FA0: 0A 2A 62 1F                  ; ""*1 PLAYER  1 COIN " to screen at 2A0A"
                 //1FA4: 07 2A E1 1F                  ; ""*2 PLAYERS 2 COINS" to screen at 2A07"
@@ -4797,7 +4855,9 @@ MessageCredit:                //MessageCredit:
                 //; 00   Reached Y flag
                 //; 1F80 Base iamge (small alien with Y)
                 //;
-                //1FC9: 00 00 FF B8 FF 80 1F 10 97 00 80 1F 
+SplashAni3Struct:
+.byte $00, $00, $FF, $40, $FF, $0c, $0d, $10, $78, $00, $80, $1F                //1FC9: 00 00 FF B8 FF 80 1F 10 97 00 80 1F 
+                    // chnaged bytes 5/6 to image numbers for sprite+Y
                 //
                 //; Splash screen animation structure 4
                 //; 00   Image form (increments each draw)
@@ -4810,15 +4870,15 @@ MessageCredit:                //MessageCredit:
                 //; 94   Target Y coordiante
                 //; 00   Reached Y flag
                 //; 1C20 Base iamge (small alien)
-                //;
-                //1FD5: 00 00 01 D0 22 20 1C 10 94 00 20 1C 
+SplashAni4Struct:                //;
+.byte $00, $00, $01, $D0, $22, $20, $1C, $10, $94, $00, $20, $1C                //1FD5: 00 00 01 D0 22 20 1C 10 94 00 20 1C 
                 //
-                //Message2Coins:
+Message2Coins:                //Message2Coins:
                 //1FE1: 28 1C 26 0F 0B 00 18 04    ; ""*2 PLAYERS 2 COINS"""
                 //1FE9: 11 12 26 1C 26 02 0E 08 
                 //1FF1: 0D 12                                
                 //
-                //MessagePush:
+MessagePush:                //MessagePush:
                 //1FF3: 0F 14 12 07 26             ; ""PUSH " (with space on the end)"
                 //
                 //1FF8: 00 08 08 08 08 08 00 00                ; 3F:""-"""

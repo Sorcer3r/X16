@@ -292,7 +292,7 @@ buildSpriteAddressTable:{
 	// aliens
 	lda #2			//16*8
 	sta spriteStep
-	ldx #$0c	// 12 of these
+	ldx #$0e	// 14 of these
 	jsr fillArray
 	// shots
 	// y and pointers continue
@@ -367,7 +367,7 @@ spriteFiles:{
 // sprite data sets#import "SpriteArray.asm"
 
 spriteAliens:
-#import "sprites 12 16x8(64).asm"
+#import "sprites 14 16x8(64).asm"
 _spriteAliens:
 
 spriteShots:
