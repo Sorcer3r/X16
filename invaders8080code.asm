@@ -110,11 +110,11 @@ jmp waitForStart                //0064: C3 65 07        JP      WaitForStart    
 gameLoop:                //; Main game-play timing loop
 jsr TimeFleetSound                //006F: CD 40 17        CALL    TimeFleetSound      ; Time down fleet sound and sets flag if needs new delay value
 gameLoopNoSound:
-break()                //0072: 3A 32 20        LD      A,(obj2TimerExtra)  ; Use rolling shot's timer to sync ..."
-                //0075: 32 80 20        LD      (shotSync),A        ; ... other two shots"
-                //0078: CD 00 01        CALL    DrawAlien           ; Draw the current alien (or exploding alien)
-                //007B: CD 48 02        CALL    RunGameObjs         ; Process game objects (including player object)
-                //007E: CD 13 09        CALL    TimeToSaucer        ; Count down time to saucer
+lda gamevars8080.obj2TimerExtra               //0072: 3A 32 20        LD      A,(obj2TimerExtra)  ; Use rolling shot's timer to sync ..."
+sta gamevars8080.shotSync                //0075: 32 80 20        LD      (shotSync),A        ; ... other two shots"
+jsr DrawAlien                //0078: CD 00 01        CALL    DrawAlien           ; Draw the current alien (or exploding alien)
+jsr RunGameObjs                //007B: CD 48 02        CALL    RunGameObjs         ; Process game objects (including player object)
+jsr TimeToSaucer                //007E: CD 13 09        CALL    TimeToSaucer        ; Count down time to saucer
                 //0081: 00              NOP                          ; ** Why are we waiting?
 isrExit:                //;
 restoreRegs()          //0082: E1              POP     HL                   ; Restore ...
@@ -164,49 +164,54 @@ rts                //0087: C9              RET                          ; Return
                 //; self-test routine on startup (based on a dip switch). Even the original code padded with zeros
                 //; to make the next function begin at 0100. Room for expansion?
                 //
-                //DrawAlien:
+DrawAlien:                //DrawAlien:
                 //; 2006 holds the index into the alien flag data grid. 2067 holds the MSB of the pointer (21xx or 22xx).
                 //; If there is an alien exploding time it down. Otherwise draw the alien if it alive (or skip if
                 //; it isn't). If an alien is drawn (or blank) then the 2000 alien-drawing flag is cleared.
                 //;
-                //0100: 21 02 20        LD      HL,$2002            ; Is there an ..."
+lda gamevars8080.alienIsExploding                 //0100: 21 02 20        LD      HL,$2002            ; Is there an ..."
                 //0103: 7E              LD      A,(HL)              ; ... alien ..."
                 //0104: A7              AND     A                    ; ... exploding?
-                //0105: C2 38 15        JP      NZ,AExplodeTime     ; Yes ... go time it down and out"
+beq !+
+jmp AExplodeTime                //0105: C2 38 15        JP      NZ,AExplodeTime     ; Yes ... go time it down and out"
+!:
                 //;
                 //0108: E5              PUSH    HL                   ; 2002 on the stack
-                //0109: 3A 06 20        LD      A,(alienCurIndex)   ; Get alien index ..."
-                //010C: 6F              LD      L,A                  ; ... for the 21xx or 22xx pointer"
-                //010D: 3A 67 20        LD      A,(playerDataMSB)   ; Get MSB ..."
-                //0110: 67              LD      H,A                  ; ... of data area (21xx or 22xx)"
-                //0111: 7E              LD      A,(HL)              ; Get alien status flag"
+lda gamevars8080.alienCurIndex                //0109: 3A 06 20        LD      A,(alienCurIndex)   ; Get alien index ..."
+sta HL                //010C: 6F              LD      L,A                  ; ... for the 21xx or 22xx pointer"
+lda gamevars8080.playerDataMSB                //010D: 3A 67 20        LD      A,(playerDataMSB)   ; Get MSB ..."
+sta HL+1                //0110: 67              LD      H,A                  ; ... of data area (21xx or 22xx)"
+lda (HL)                //0111: 7E              LD      A,(HL)              ; Get alien status flag"
                 //0112: A7              AND     A                    ; Is the alien alive?
                 //0113: E1              POP     HL                   ; HL=2002
-                //0114: CA 36 01        JP      Z,$0136             ; No alien ... skip drawing alien sprite (but flag done)"
+beq DrawAlienExit                //0114: CA 36 01        JP      Z,$0136             ; No alien ... skip drawing alien sprite (but flag done)"
                 //0117: 23              INC     HL                   ; HL=2003 Bump descriptor
                 //0118: 23              INC     HL                   ; HL=2004 Point to alien's row
-                //0119: 7E              LD      A,(HL)              ; Get alien type"
+lda gamevars8080.alienRow                //0119: 7E              LD      A,(HL)              ; Get alien type"
                 //011A: 23              INC     HL                   ; HL=2005 Bump descriptor
                 //011B: 46              LD      B,(HL)              ; Get animation number"
-                //011C: E6 FE           AND     $FE                  ; Translate row to type offset as follows: ...
-                //011E: 07              RLCA                         ; ... 0,1 -> 32 (type 1) ..."
-                //011F: 07              RLCA                         ; ... 2,3 -> 16 (type 2) ..."
-                //0120: 07              RLCA                         ; ...   4 -> 32 (type 3) on top row
-                //0121: 5F              LD      E,A                  ; Sprite offset LSB"
-                //0122: 16 00           LD      D,$00                ; MSB is 0"
-                //0124: 21 00 1C        LD      HL,$1C00            ; Position 0 alien sprites"
-                //0127: 19              ADD     HL,DE                ; Offset to sprite type"
-                //0128: EB              EX      DE,HL                ; Sprite offset to DE"
-                //0129: 78              LD      A,B                  ; Animation frame number"
-                //012A: A7              AND     A                    ; Is it position 0?
-                //012B: C4 3B 01        CALL    NZ,$013B            ; No ... add 30 and use position 1 alien sprites"
-                //012E: 2A 0B 20        LD      HL,(alienPosLSB)    ; Pixel position"
-                //0131: 06 10           LD      B,$10                ; 16 rows in alien sprites"
-                //0133: CD D3 15        CALL    DrawSprite          ; Draw shifted sprite
-                //;
+and #$fe                //011C: E6 FE           AND     $FE                  ; Translate row to type offset as follows: ...
+                //011E: 07              RLCA                         ; ... 0,1 -> 32 (type 1) ..." 000 001 000   00000000 0
+                //011F: 07              RLCA                         ; ... 2,3 -> 16 (type 2) ..." 010 011 010   00010000 16
+// row 0,1 =0                //0120: 07              RLCA                         ; ...   4 -> 32 (type 3) on top row 100 100 00100000 32
+// row 2,3 =2               //0121: 5F              LD      E,A                  ; Sprite offset LSB"
+//row 4 = 4                //0122: 16 00           LD      D,$00                ; MSB is 0"
+// use as X for sprite image                 //0124: 21 00 1C        LD      HL,$1C00            ; Position 0 alien sprites"
+// and add 1 if frame 1                //0127: 19              ADD     HL,DE                ; Offset to sprite type"
+clc               //0128: EB              EX      DE,HL                ; Sprite offset to DE"
+adc gamevars8080.alienFrame                //0129: 78              LD      A,B                  ; Animation frame number"
+tax                //012A: A7              AND     A                    ; Is it position 0?
+//x is frame image for alien                //012B: C4 3B 01        CALL    NZ,$013B            ; No ... add 30 and use position 1 alien sprites"
+lda gamevars8080.alienPosLSB                //012E: 2A 0B 20        LD      HL,(alienPosLSB)    ; Pixel position"
+sta HL
+lda gamevars8080.alienPosMSB
+sta HL+1
+loadBC($1000)                //0131: 06 10           LD      B,$10                ; 16 rows in alien sprites"
+jsr DrawSprite                //0133: CD D3 15        CALL    DrawSprite          ; Draw shifted sprite
+DrawAlienExit:                //;
                 //0136: AF              XOR     A                    ; Let the ISR routine ...
-                //0137: 32 00 20        LD      (waitOnDraw),A      ; ... advance the cursor to the next alien"
-                //013A: C9              RET                          ; Out
+stz gamevars8080.waitOnDraw               //0137: 32 00 20        LD      (waitOnDraw),A      ; ... advance the cursor to the next alien"
+rts                //013A: C9              RET                          ; Out
                 //;
                 //013B: 21 30 00        LD      HL,$0030            ; Offset sprite pointer ..."
                 //013E: 19              ADD     HL,DE                ; ... to animation frame 1 sprites"
@@ -309,16 +314,17 @@ rts                //0141: 3A 68 20        LD      A,(playerOK)        ; Is the 
                 //
                 //01BF: 00 ; ** Why?
                 //
-                //InitAliens:
+InitAliens:                //InitAliens:
                 //; Initialize the 55 aliens from last to 1st. 1 means alive.
                 //;
-                //01C0: 21 00 21        LD      HL,$2100            ; Start of alien structures (this is the last alien)"
-                //01C3: 06 37           LD      B,$37                ; Count to 55 (that's five rows of 11 aliens)"
-                //01C5: 36 01           LD      (HL),$01            ; Bring alien to live"
-                //01C7: 23              INC     HL                   ; Next alien
-                //01C8: 05              DEC     B                    ; All done?
-                //01C9: C2 C5 01        JP      NZ,$01C5            ; No ... keep looping"
-                //01CC: C9              RET                          ; Done
+lda #$01                //01C0: 21 00 21        LD      HL,$2100            ; Start of alien structures (this is the last alien)"
+ldx #$36                //01C3: 06 37           LD      B,$37                ; Count to 55 (that's five rows of 11 aliens)"
+InitAliens1:
+sta gamevars8080.P1Data,x                //01C5: 36 01           LD      (HL),$01            ; Bring alien to live"
+                        //01C7: 23              INC     HL                   ; Next alien
+dex                     //01C8: 05              DEC     B                    ; All done?
+bpl InitAliens1         //01C9: C2 C5 01        JP      NZ,$01C5            ; No ... keep looping"
+rts                     //01CC: C9              RET                          ; Done
                 //
                 //ReturnTwo:
                 //; If there are no aliens left on the screen then MoveDrawAlien comes here which returns from the
@@ -327,13 +333,19 @@ rts                //0141: 3A 68 20        LD      A,(playerOK)        ; Is the 
                 //01CD: E1              POP     HL                   ; Drop return to caller
                 //01CE: C9              RET                          ; Return to caller's caller
                 //Misc
-                //DrawBottomLine:
+DrawBottomLine:                //DrawBottomLine:
                 //; Draw a 1px line across the player's stash at the bottom of the screen.
                 //;
-                //01CF: 3E 01           LD      A,$01                ; Bit 1 set ... going to draw a 1-pixel stripe down left side"
-                //01D1: 06 E0           LD      B,$E0                ; All the way down the screen"
-                //01D3: 21 02 24        LD      HL,$2402            ; Screen coordinates (3rd byte from upper left)"
-                //01D6: C3 CC 14        JP      $14CC                ; Draw line down left side
+addressRegister(0,$1cb0c,1,0)
+lda #$3e                //01CF: 3E 01           LD      A,$01                ; Bit 1 set ... going to draw a 1-pixel stripe down left side"
+ldy #$01
+ldx #$1c               //01D1: 06 E0           LD      B,$E0                ; All the way down the screen 224
+drawBottom1:
+sta VERADATA0                //01D3: 21 02 24        LD      HL,$2402            ; Screen coordinates (3rd byte from upper left)"
+sty VERADATA0                //01D6: C3 CC 14        JP      $14CC                ; Draw line down left side
+dex
+bne drawBottom1
+rts
                 //
 AddDelta:                //AddDelta:
                 //; HL points to descriptor: DX DY XX YY except DX is already loaded in C
@@ -372,7 +384,7 @@ lda #>gamevars8080.waitOnDraw
 sta HL+1
 jmp BlockCopy                //01EC: C3 32 1A        JP      BlockCopy           ; Copy [DE]->[HL] and return
                 //Copy/Restore Shields
-                //DrawShieldPl1:
+DrawShieldPl1:                //DrawShieldPl1:
                 //; Draw the shields for player 1 (draws it in the buffer in the player's data area).
                 //;
                 //01EF: 21 42 21        LD      HL,$2142            ; Player 1 shield buffer (remember between games in multi-player)"
@@ -391,34 +403,34 @@ jmp BlockCopy                //01EC: C3 32 1A        JP      BlockCopy          
                 //0203: D1              POP     DE                   ; Restore start of shield pattern
                 //0204: 0D              DEC     C                    ; Drawn all shields?
                 //0205: C2 FD 01        JP      NZ,$01FD            ; No ... go draw them all"
-                //0208: C9              RET                          ; Done
+rts                //0208: C9              RET                          ; Done
                 //
-                //RememberShields1:
+RememberShields1:                //RememberShields1:
                 //; Copy shields on the screen to player 1's data area.
                 //;
                 //0209: 3E 01           LD      A,$01                ; Not zero means remember"
                 //020B: C3 1B 02        JP      $021B                ; Shuffle-shields player 1
                 //
-                //RememberShields2:
+RememberShields2:                //RememberShields2:
                 //; Copy shields on the screen to player 2's data area.
                 //;
                 //020E: 3E 01           LD      A,$01                ; Not zero means remember"
                 //0210: C3 14 02        JP      $0214                ; Shuffle-shields player 2
                 //
-                //RestoreShields2:
+RestoreShields2:                //RestoreShields2:
                 //; Copy shields from player 2's data area to screen.
                 //;
                 //0213: AF              XOR     A                    ; Zero means restore
                 //0214: 11 42 22        LD      DE,$2242            ; Player 2 shield buffer (remember between games in multi-player)"
                 //0217: C3 1E 02        JP      CopyShields         ; Shuffle-shields player 2
                 //
-                //RestoreShields1:
+RestoreShields1:                //RestoreShields1:
                 //; Copy shields from player 1's data area to screen.
                 //;
                 //021A: AF              XOR     A                    ; Zero means restore
                 //021B: 11 42 21        LD      DE,$2142            ; Player 1 shield buffer (remember between games in multi-player)"
                 //
-                //CopyShields:
+CopyShields:                //CopyShields:
                 //; A is 1 for screen-to-buffer, 0 for to buffer-to-screen"
                 //; HL is screen coordinates of first shield. There are 23 rows between shields.
                 //; DE is sprite buffer in memory.
@@ -444,7 +456,7 @@ jmp BlockCopy                //01EC: C3 32 1A        JP      BlockCopy          
                 //023F: C3 29 02        JP      $0229                ; Go back and do all
                 //;
                 //0242: CD 7C 14        CALL    RememberShields     ; Remember player's shields
-                //0245: C3 35 02        JP      $0235                ; Continue with next shield
+rts                //0245: C3 35 02        JP      $0235                ; Continue with next shield
                 //Game Objects
 RunGameObjs:                //RunGameObjs:
 break()                //; Process game objects. Each game object has a 16 byte structure. The handler routine for the object
@@ -1536,20 +1548,29 @@ DrawChar:
                 //090E: D3 06           OUT     (WATCHDOG),A        ; Feed watchdog"
                 //0910: C3 39 14        JP      DrawSimpSprite      ; To screen
                 //
-                //TimeToSaucer:
-                //0913: 3A 09 20        LD      A,(refAlienYr)      ; Reference alien's X coordinate"
-                //0916: FE 78           CP      $78                  ; Don't process saucer timer ... ($78 is 1st rack Yr)
-                //0918: D0              RET     NC                   ; ... unless aliens are closer to bottom
-                //0919: 2A 91 20        LD      HL,(tillSaucerLSB)  ; Time to saucer"
+TimeToSaucer:                //TimeToSaucer:
+lda gamevars8080.refAlienYr                //0913: 3A 09 20        LD      A,(refAlienYr)      ; Reference alien's X coordinate"
+cmp #$78                //0916: FE 78           CP      $78                  ; Don't process saucer timer ... ($78 is 1st rack Yr)
+bcc TimeTosaucerExit                //0918: D0              RET     NC                   ; ... unless aliens are closer to bottom
+loadHL(gamevars8080.tillSaucerLSB)
+lda (HL)               //0919: 2A 91 20        LD      HL,(tillSaucerLSB)  ; Time to saucer"
                 //091C: 7D              LD      A,L                  ; Is it time ..."
-                //091D: B4              OR      H                    ; ... for a saucer
-                //091E: C2 29 09        JP      NZ,$0929            ; No ... skip flagging"
-                //0921: 21 00 06        LD      HL,$0600            ; Reset timer to 600 game loops"
-                //0924: 3E 01           LD      A,$01                ; Flag a ..."
-                //0926: 32 83 20        LD      (saucerStart),A     ; ... saucer sequence"
-                //0929: 2B              DEC     HL                   ; Decrement the ...
-                //092A: 22 91 20        LD      (tillSaucerLSB),HL  ; ... time-to-saucer"
-                //092D: C9              RET                          ; Done
+ora (HL+1)               //091D: B4              OR      H                    ; ... for a saucer
+bne DecTimeToSaucer               //091E: C2 29 09        JP      NZ,$0929            ; No ... skip flagging"
+loadHL($0600)               //0921: 21 00 06        LD      HL,$0600            ; Reset timer to 600 game loops"
+lda #$01                //0924: 3E 01           LD      A,$01                ; Flag a ..."
+sta gamevars8080.saucerStart                //0926: 32 83 20        LD      (saucerStart),A     ; ... saucer sequence"
+DecTimeToSaucer:
+dec HL                //0929: 2B              DEC     HL                   ; Decrement the ...
+bcc !+
+dec HL+1
+!:
+lda HL                //092A: 22 91 20        LD      (tillSaucerLSB),HL  ; ... time-to-saucer"
+sta gamevars8080.tillSaucerLSB
+lda HL+1
+sta gamevars8080.tillSaucerMSB
+TimeTosaucerExit:
+rts                //092D: C9              RET                          ; Done
                 //
                 //;=============================================================
 getNumActiveShips:                //; Get number of ships for acive player
@@ -1759,10 +1780,10 @@ rts
                 //0A55: C2 52 0A        JP      NZ,$0A52            ; ... collision to end"
                 //0A58: C9              RET                          ; Done
                 //
-                //; Check to see if player is hit
-                //0A59: 3A 15 20        LD      A,(playerAlive)     ; Active player hit flag"
-                //0A5C: FE FF           CP      $FF                  ; All FFs means player is OK
-                //0A5E: C9              RET                          ; Out
+isPlayerAlive:                //; Check to see if player is hit
+lda gamevars8080.playerAlive                //0A59: 3A 15 20        LD      A,(playerAlive)     ; Active player hit flag"
+cmp #$ff                //0A5C: FE FF           CP      $FF                  ; All FFs means player is OK
+rts                //0A5E: C9              RET                          ; Out
                 //
                 //ScoreForAlien:
                 //; Start the hit-alien sound and flag the adjustment for the score.
@@ -1951,25 +1972,26 @@ jsr RemoveShip                //0B5A: CD 7F 1A        CALL    RemoveShip        
 playDemo1:
 jsr TwoSecDelay
 jsr CopyRAMMirror                //0B5D: CD E4 01        CALL    CopyRAMMirror       ; Block copy ROM mirror to initialize RAM
-break()                //0B60: CD C0 01        CALL    InitAliens          ; Initialize all player 1 aliens
-                //0B63: CD EF 01        CALL    DrawShieldPl1       ; Draw shields for player 1 (to buffer)
-                //0B66: CD 1A 02        CALL    RestoreShields1     ; Restore shields for player 1 (to screen)
-                //0B69: 3E 01           LD      A,$01                ; ISR splash-task ..."
-                //0B6B: 32 C1 20        LD      (isrSplashTask),A   ; ... playing demo"
-                //0B6E: CD CF 01        CALL    DrawBottomLine      ; Draw playfield line
-                //;
-                //0B71: CD 18 16        CALL    PlrFireOrDemo       ; In demo ... process demo movement and always fire
-                //0B74: CD F1 0B        CALL    $0BF1                ; Check player shot and aliens bumping edges of screen and hidden message
+jsr InitAliens                //0B60: CD C0 01        CALL    InitAliens          ; Initialize all player 1 aliens
+jsr DrawShieldPl1                //0B63: CD EF 01        CALL    DrawShieldPl1       ; Draw shields for player 1 (to buffer)
+jsr RestoreShields1                //0B66: CD 1A 02        CALL    RestoreShields1     ; Restore shields for player 1 (to screen)
+lda #$01                //0B69: 3E 01           LD      A,$01                ; ISR splash-task ..."
+sta gamevars8080.isrSplashTask                //0B6B: 32 C1 20        LD      (isrSplashTask),A   ; ... playing demo"
+jsr DrawBottomLine                //0B6E: CD CF 01        CALL    DrawBottomLine      ; Draw playfield line
+contDemo1:                //;
+jsr PlrFireOrDemo                //0B71: CD 18 16        CALL    PlrFireOrDemo       ; In demo ... process demo movement and always fire
+jsr plyrShotBumpHidden                //0B74: CD F1 0B        CALL    $0BF1                ; Check player shot and aliens bumping edges of screen and hidden message
                 //0B77: D3 06           OUT     (WATCHDOG),A        ; Feed watchdog"
-                //0B79: CD 59 0A        CALL    $0A59                ; Has demo player been hit?
-                //0B7C: CA 71 0B        JP      Z,$0B71             ; No ... continue game"
+jsr isPlayerAlive                //0B79: CD 59 0A        CALL    $0A59                ; Has demo player been hit?
+beq contDemo1                //0B7C: CA 71 0B        JP      Z,$0B71             ; No ... continue game"
                 //0B7F: AF              XOR     A                    ; Remove player shot ...
-                //0B80: 32 25 20        LD      (plyrShotStatus),A  ; ... from activity"
-                //0B83: CD 59 0A        CALL    $0A59                ; Wait for demo player ...
-                //0B86: C2 83 0B        JP      NZ,$0B83            ; ... to stop exploding"
+stz gamevars8080.plyrShotStatus                //0B80: 32 25 20        LD      (plyrShotStatus),A  ; ... from activity"
+waitDemoBoom:
+jsr isPlayerAlive                //0B83: CD 59 0A        CALL    $0A59                ; Wait for demo player ...
+bne waitDemoBoom                //0B86: C2 83 0B        JP      NZ,$0B83            ; ... to stop exploding"
                 //;
                 //; Credit information
-                //0B89: AF              XOR     A                    ; Turn off ...
+HERE:                //0B89: AF              XOR     A                    ; Turn off ...
                 //0B8A: 32 C1 20        LD      (isrSplashTask),A   ; ... splash animation"
                 //0B8D: CD B1 0A        CALL    OneSecDelay         ; One second delay
                 //0B90: CD 88 19        CALL    $1988                ; ** Something else at one time? Jump straight to clear-play-field
@@ -2006,10 +2028,10 @@ break()                //0B60: CD C0 01        CALL    InitAliens          ; Ini
                 //0BE1: 77              LD      (HL),A              ; ... next time"
                 //0BE2: CD D6 09        CALL    ClearPlayField      ; Clear play field
                 //0BE5: C3 DF 18        JP      $18DF                ; Keep splashing
-                //
-                //
-                //0BF1: CD 0A 19        CALL    PlyrShotAndBump     ; Check if player is shot and aliens bumping the edge of screen
-                //0BF4: C3 9A 19        JP      CheckHiddenMes      ; Check for hidden-message display sequence
+!: bra !-                //
+plyrShotBumpHidden:                //
+jsr PlyrShotAndBump           //0BF1: CD 0A 19        CALL    PlyrShotAndBump     ; Check if player is shot and aliens bumping the edge of screen
+jmp CheckHiddenMes                //0BF4: C3 9A 19        JP      CheckHiddenMes      ; Check for hidden-message display sequence
                 //
 MessageCorp:                //MessageCorp:
                 //; ""TAITO COP"""
@@ -3000,17 +3022,19 @@ MessageCorp:                //MessageCorp:
                 //14D4: C2 CC 14        JP      NZ,$14CC            ; No ... clear all"
                 //14D7: C9              RET                          
                 //
-                //PlayerShotHit:
+PlayerShotHit:                //PlayerShotHit:
                 //; The player's shot hit something (or is being removed from play)
                 //;
-                //14D8: 3A 25 20        LD      A,(plyrShotStatus)  ; Player shot flag"
-                //14DB: FE 05           CP      $05                  ; Alien explosion in progress?
-                //14DD: C8              RET     Z                    ; Yes ... ignore this function
-                //14DE: FE 02           CP      $02                  ; Normal movement?
-                //14E0: C0              RET     NZ                   ; No ... out
-                //;
-                //14E1: 3A 29 20        LD      A,(obj1CoorYr)      ; Get Yr coordinate of player shot"
-                //14E4: FE D8           CP      $D8                  ; Compare to 216 (40 from Top-rotated)
+lda gamevars8080.plyrShotStatus                //14D8: 3A 25 20        LD      A,(plyrShotStatus)  ; Player shot flag"
+cmp #$05                //14DB: FE 05           CP      $05                  ; Alien explosion in progress?
+beq PlayerShotHitExit                //14DD: C8              RET     Z                    ; Yes ... ignore this function
+cmp #$02                //14DE: FE 02           CP      $02                  ; Normal movement?
+beq PlayerSHotHit1                //14E0: C0              RET     NZ                   ; No ... out
+PlayerShotHitExit:
+rts                //;
+PlayerSHotHit1:
+break()                //14E1: 3A 29 20        LD      A,(obj1CoorYr)      ; Get Yr coordinate of player shot"
+lda #$BB                //14E4: FE D8           CP      $D8                  ; Compare to 216 (40 from Top-rotated)
                 //14E6: 47              LD      B,A                  ; Hold value for later"
                 //14E7: D2 30 15        JP      NC,$1530            ; Yr is within 40 from top initiate miss-explosion (shot flag 3)"
                 //14EA: 3A 02 20        LD      A,(alienIsExploding); Is an alien ..."
@@ -3087,7 +3111,8 @@ MessageCorp:                //MessageCorp:
                 //;
                 //AExplodeTime:
                 //; Time down the alien explosion. Remove when done.
-                //1538: 21 03 20        LD      HL,$2003            ; Decrement alien explosion ..."
+AExplodeTime:
+break()                //1538: 21 03 20        LD      HL,$2003            ; Decrement alien explosion ..."
                 //153B: 35              DEC     (HL)                 ; ... timer
                 //153C: C0              RET     NZ                   ; Not done  ... out
                 //153D: 2A 64 20        LD      HL,(expAlienYr)     ; Pixel pointer for exploding alien"
@@ -3180,12 +3205,12 @@ MessageCorp:                //MessageCorp:
                 //1593: FA 90 15        JP      M,WrapRef           ; Keep going till result is positive"
                 //1596: C9              RET                          ; Out
                 //
-                //RackBump:
+RackBump:                //RackBump:
                 //; When rack bumps the edge of the screen then the direction flips and the rack
                 //; drops 8 pixels. The deltaX and deltaY values are changed here. Interestingly
                 //; if there is only one alien left then the right value is 3 instead of the
                 //; usual 2. The left direction is always -2.
-                //1597: 3A 0D 20        LD      A,(rackDirection)   ; Get rack direction"
+// TODO                //1597: 3A 0D 20        LD      A,(rackDirection)   ; Get rack direction"
                 //159A: A7              AND     A                    ; Moving right?
                 //159B: C2 B7 15        JP      NZ,$15B7            ; No ... handle moving left"
                 //;
@@ -3200,7 +3225,7 @@ MessageCorp:                //MessageCorp:
                 //15AD: 32 08 20        LD      (refAlienDXr),A     ; Set new delta X"
                 //15B0: 3A 0E 20        LD      A,(rackDownDelta)   ; Set delta Y ..."
                 //15B3: 32 07 20        LD      (refAlienDYr),A     ; ... to drop rack by 8"
-                //15B6: C9              RET                          ; Done
+rts                //15B6: C9              RET                          ; Done
                 //;
                 //15B7: 21 24 25        LD      HL,$2524            ; Line down the left edge of playfield"
                 //15BA: CD C5 15        CALL    $15C5                ; Check line down the edge
@@ -3220,10 +3245,43 @@ MessageCorp:                //MessageCorp:
                 //
                 //15D2: 00              NOP                          ; ** Why? Something optimized?
                 //    
-                //DrawSprite:
+DrawSprite:                //DrawSprite:
+                // gamevars8080.alienCurIndex is sprite number
+                // x is offset to image
+                //HL is position (bits?)
+                //BC = $1000 . 16 lines. dont need!
                 //; Draw sprite at [DE] to screen at pixel position in HL
                 //; The hardware shift register is used in converting pixel positions
                 //; to screen coordinates.
+lda #$fc
+lda gamevars8080.alienCurIndex
+asl
+asl
+asl         // *8 to sprite address $1fc00 +a
+bcc !+
+inc HL+1    // carry if we went past 255 in L
+!:
+sta HL
+addressRegisterByHL(0,1,1,0)  //point to sprite number based on currentalien
+
+lda SpriteArray.addressTableLo,x
+sta VERADATA0
+lda SpriteArray.addressTableHi,x
+sta VERADATA0
+lda (HL) //gamevars8080.splashXr
+clc
+adc #$30
+sta VERADATA0
+lda #$00
+adc #$00
+sta VERADATA0
+lda (HL+1)   //gamevars8080.splashYr
+sta VERADATA0
+stz VERADATA0
+lda #%00001100
+sta VERADATA0
+lda #%00010000
+sta VERADATA0
                 //15D3: CD 74 14        CALL    CnvtPixNumber       ; Convert pixel number to screen/shift
                 //15D6: E5              PUSH    HL                   ; Preserve screen coordinate
                 //15D7: C5              PUSH    BC                   ; Hold for a second
@@ -3245,7 +3303,7 @@ MessageCorp:                //MessageCorp:
                 //15ED: 05              DEC     B                    ; All done?
                 //15EE: C2 D7 15        JP      NZ,$15D7            ; No ... do all"
                 //15F1: E1              POP     HL                   ; Restore HL
-                //15F2: C9              RET                          ; Done
+rts                //15F2: C9              RET                          ; Done
                 //
                 //CountAliens:
                 //; Count number of aliens remaining in active game and return count 2082 holds the current count.
@@ -3267,60 +3325,67 @@ MessageCorp:                //MessageCorp:
                 //160E: 36 01           LD      (HL),$01            ; ... only one alien left"
                 //1610: C9              RET                          ; Out
                 //
-                //GetPlayerDataPtr:
+GetPlayerDataPtr:                //GetPlayerDataPtr:
                 //; Set HL with 2100 if player 1 is active or 2200 if player 2 is active
-GetPlayerDataPtr:                //;
+                //;
 stz HL                //1611: 2E 00           LD      L,$00                ; Byte boundary"
 lda gamevars8080.playerDataMSB                //1613: 3A 67 20        LD      A,(playerDataMSB)   ; Active player number"
 sta HL+1                //1616: 67              LD      H,A                  ; Set HL to data"
 rts                //1617: C9              RET                          ; Done
                 //
-                //PlrFireOrDemo:
+PlrFireOrDemo:                //PlrFireOrDemo:
                 //; Initiate player fire if button is pressed.
                 //; Demo commands are parsed here if in demo mode
-                //1618: 3A 15 20        LD      A,(playerAlive)     ; Is there an active player?"
-                //161B: FE FF           CP      $FF                  ; FF = alive
-                //161D: C0              RET     NZ                   ; Player has been shot - no firing
+lda gamevars8080.playerAlive                //1618: 3A 15 20        LD      A,(playerAlive)     ; Is there an active player?"
+cmp #$ff                //161B: FE FF           CP      $FF                  ; FF = alive
+bne PlrFireOrDemoExit                //161D: C0              RET     NZ                   ; Player has been shot - no firing
                 //161E: 21 10 20        LD      HL,$2010            ; Get player ..."
-                //1621: 7E              LD      A,(HL)              ; ... task ..."
+lda gamevars8080.obj0TimerMSB                //1621: 7E              LD      A,(HL)              ; ... task ..."
                 //1622: 23              INC     HL                   ; ... timer ...
-                //1623: 46              LD      B,(HL)              ; ... value"
+ora gamevars8080.obj0TimerLSB                //1623: 46              LD      B,(HL)              ; ... value"
                 //1624: B0              OR      B                    ; Is the timer 0 (object active)?
-                //1625: C0              RET     NZ                   ; No ... no firing till player object starts
-                //1626: 3A 25 20        LD      A,(plyrShotStatus)  ; Does the player have ..."
+bne PlrFireOrDemoExit                //1625: C0              RET     NZ                   ; No ... no firing till player object starts
+lda gamevars8080.plyrShotStatus                //1626: 3A 25 20        LD      A,(plyrShotStatus)  ; Does the player have ..."
                 //1629: A7              AND     A                    ; ... a shot on the screen?
-                //162A: C0              RET     NZ                   ; Yes ... ignore
-                //162B: 3A EF 20        LD      A,(gameMode)        ; Are we in ..."
+bne PlrFireOrDemoExit                //162A: C0              RET     NZ                   ; Yes ... ignore
+lda gamevars8080.gameMode                //162B: 3A EF 20        LD      A,(gameMode)        ; Are we in ..."
                 //162E: A7              AND     A                    ; ... game mode?
-                //162F: CA 52 16        JP      Z,$1652             ; No ... in demo mode ... constant firing in demo"
-                //1632: 3A 2D 20        LD      A,(fireBounce)      ; Is fire button ..."
+beq demoConstantFire                //162F: CA 52 16        JP      Z,$1652             ; No ... in demo mode ... constant firing in demo"
+lda gamevars8080.fireBounce                //1632: 3A 2D 20        LD      A,(fireBounce)      ; Is fire button ..."
                 //1635: A7              AND     A                    ; ... being held down?
-                //1636: C2 48 16        JP      NZ,$1648            ; Yes ... wait for bounce"
-                //1639: CD C0 17        CALL    ReadInputs          ; Read active player controls
-                //163C: E6 10           AND     $10                  ; Fire-button pressed?
-                //163E: C8              RET     Z                    ; No ... out
-                //163F: 3E 01           LD      A,$01                ; Flag"
-                //1641: 32 25 20        LD      (plyrShotStatus),A  ; Flag shot active"
-                //1644: 32 2D 20        LD      (fireBounce),A      ; Flag that fire button is down"
-                //1647: C9              RET                          ; Out
-                //1648: CD C0 17        CALL    ReadInputs          ; Read active player controls
-                //164B: E6 10           AND     $10                  ; Fire-button pressed?
-                //164D: C0              RET     NZ                   ; Yes ... ignore
-                //164E: 32 2D 20        LD      (fireBounce),A      ; Else ... clear flag"
-                //1651: C9              RET                          ; Out
+bne plrFireDebounce                //1636: C2 48 16        JP      NZ,$1648            ; Yes ... wait for bounce"
+jsr ReadInputs                //1639: CD C0 17        CALL    ReadInputs          ; Read active player controls
+and #$10                //163C: E6 10           AND     $10                  ; Fire-button pressed?
+beq PlrFireOrDemoExit                //163E: C8              RET     Z                    ; No ... out
+lda #$01                //163F: 3E 01           LD      A,$01                ; Flag"
+sta gamevars8080.plyrShotStatus                //1641: 32 25 20        LD      (plyrShotStatus),A  ; Flag shot active"
+sta gamevars8080.fireBounce                //1644: 32 2D 20        LD      (fireBounce),A      ; Flag that fire button is down"
+PlrFireOrDemoExit:
+rts                //1647: C9              RET                          ; Out
+plrFireDebounce:
+jsr ReadInputs                //1648: CD C0 17        CALL    ReadInputs          ; Read active player controls
+and #$10                //164B: E6 10           AND     $10                  ; Fire-button pressed?
+bne PlrFireOrDemoExit                //164D: C0              RET     NZ                   ; Yes ... ignore
+sta gamevars8080.fireBounce                //164E: 32 2D 20        LD      (fireBounce),A      ; Else ... clear flag"
+rts                //1651: C9              RET                          ; Out
                 //; Handle demo (constant fire, parse demo commands)"
-                //1652: 21 25 20        LD      HL,$2025            ; Demo fires ..."
-                //1655: 36 01           LD      (HL),$01            ; ... constantly"
-                //1657: 2A ED 20        LD      HL,(demoCmdPtrLSB)  ; Demo command bufer"
-                //165A: 23              INC     HL                   ; Next position
-                //165B: 7D              LD      A,L                  ; Command buffer ..."
-                //165C: FE 7E           CP      $7E                  ; ... wraps around
-                //165E: DA 63 16        JP      C,$1663             ; ... Buffer from 1F74 to 1F7E"
-                //1661: 2E 74           LD      L,$74                ; ... overflow"
-                //1663: 22 ED 20        LD      (demoCmdPtrLSB),HL  ; Next demo command"
-                //1666: 7E              LD      A,(HL)              ; Get next command"
-                //1667: 32 1D 20        LD      (nextDemoCmd),A     ; Set command for movement"
-                //166A: C9              RET                          ; Done
+demoConstantFire:
+lda gamevars8080.demoCmdPtrMSB                //1652: 21 25 20        LD      HL,$2025            ; Demo fires ..."
+sta HL+1
+lda #$01                //1655: 36 01           LD      (HL),$01            ; ... constantly"
+sta gamevars8080.plyrShotStatus
+lda gamevars8080.demoCmdPtrLSB                //1657: 2A ED 20        LD      HL,(demoCmdPtrLSB)  ; Demo command bufer"
+inc                 //165A: 23              INC     HL                   ; Next position
+                    //165B: 7D              LD      A,L                  ; Command buffer ..."
+cmp <_DemoCommands                //165C: FE 7E           CP      $7E                  ; ... wraps around
+bcs DemoFire1                //165E: DA 63 16        JP      C,$1663             ; ... Buffer from 1F74 to 1F7E"
+lda <DemoCommands                //1661: 2E 74           LD      L,$74                ; ... overflow"
+DemoFire1:
+sta gamevars8080.demoCmdPtrLSB                //1663: 22 ED 20        LD      (demoCmdPtrLSB),HL  ; Next demo command"
+sta HL
+lda (HL)                //1666: 7E              LD      A,(HL)              ; Get next command"
+sta gamevars8080.nextDemoCmd                //1667: 32 1D 20        LD      (nextDemoCmd),A     ; Set command for movement"
+rts                //166A: C9              RET                          ; Done
                 //
                 //166B: 37              SCF                          ; Set carry flag
                 //166C: C9              RET                          ; Done
@@ -3528,7 +3593,7 @@ rts                //1774: C9              RET                          ; Out
                 //
                 //17BF: 00 ; ** Why?
                 //
-                //ReadInputs:
+ReadInputs:                //ReadInputs:
                 //; Read control inputs for active player
                 //17C0: 3A 67 20        LD      A,(playerDataMSB)   ; Get active player"
                 //17C3: 0F              RRCA                         ; Test player
@@ -3536,7 +3601,7 @@ rts                //1774: C9              RET                          ; Out
                 //17C7: DB 01           IN      A,(INP1)            ; Player 1 ... read port 1"
                 //17C9: C9              RET                          ; Out
                 //17CA: DB 02           IN      A,(INP2)            ; Get controls for player 2"
-                //17CC: C9              RET                          ; Out
+rts                //17CC: C9              RET                          ; Out
                 //
                 //; Check and handle TILT
                 //CheckHandleTilt:
@@ -3778,9 +3843,9 @@ jsr DrawStatus                //18DC: CD 56 19        CALL    DrawStatus        
 lda #$08                //18DF: 3E 08           LD      A,$08                ; Set alien ..."
 sta gamevars8080.aShotReloadRate               //18E1: 32 CF 20        LD      (aShotReloadRate),A ; ... shot reload rate"
 //testing
-//lda #0
-//sta gamevars8080.isrSplashTask
-//stz gamevars8080.splashAnimate
+// lda #0
+// sta gamevars8080.isrSplashTask
+// stz gamevars8080.splashAnimate
 
 jmp afterIniSplash                //18E4: C3 EA 0A        JP      $0AEA                ; Top of splash screen loop
                 //
@@ -3813,18 +3878,19 @@ jmp afterIniSplash                //18E4: C3 EA 0A        JP      $0AEA         
                 //1904: 21 00 22        LD      HL,$2200            ; Player 2 data area"
                 //1907: C3 C3 01        JP      $01C3                ; Initialize player 2 aliens
                 //
-                //PlyrShotAndBump:
-                //190A: CD D8 14        CALL    PlayerShotHit       ; Player's shot collision detection
-                //190D: C3 97 15        JP      RackBump            ; Change alien deltaX and deltaY when rack bumps edges
+PlyrShotAndBump:                //PlyrShotAndBump:
+jsr PlayerShotHit                //190A: CD D8 14        CALL    PlayerShotHit       ; Player's shot collision detection
+jmp RackBump                //190D: C3 97 15        JP      RackBump            ; Change alien deltaX and deltaY when rack bumps edges
                 //
-                //CurPlyAlive:
+CurPlyAlive:                //CurPlyAlive:
                 //; Get the current player's alive status
-                //1910: 21 E7 20        LD      HL,$20E7            ; Alive flags"
-                //1913: 3A 67 20        LD      A,(playerDataMSB)   ; Player 1 or 2"
-                //1916: 0F              RRCA                         ; Will be 1 if player 1
-                //1917: D8              RET     C                    ; Return if player 1
-                //1918: 23              INC     HL                   ; Bump to player 2
-                //1919: C9              RET                          ; Return
+loadHL(gamevars8080.player1Alive)                //1910: 21 E7 20        LD      HL,$20E7            ; Alive flags"
+lda gamevars8080.playerDataMSB                //1913: 3A 67 20        LD      A,(playerDataMSB)   ; Player 1 or 2"
+ror                //1916: 0F              RRCA                         ; Will be 1 if player 1
+bcs CurPlyAliveExit                //1917: D8              RET     C                    ; Return if player 1
+inc HL                //1918: 23              INC     HL                   ; Bump to player 2
+CurPlyAliveExit:
+rts                //1919: C9              RET                          ; Return
                 //
 DrawScoreHead:                //DrawScoreHead:
                 //; Print score header " SCORE<1> HI-SCORE SCORE<2> """
@@ -3979,7 +4045,7 @@ setISRSplashTask:
                 //
                 //1996: 00 00 00 00 ; ** Why?
                 //                          
-                //CheckHiddenMes:
+CheckHiddenMes:                //CheckHiddenMes:
                 //; There is a hidden message ""TAITO COP" (with no ""R"") in the game. It can only be"
                 //; displayed in the demonstration game during the splash screens. You must enter
                 //; 2 seqences of buttons. Timing is not critical. As long as you eventually get all
@@ -3992,28 +4058,31 @@ setISRSplashTask:
                 //; Unfortunately MAME does not deliver the simultaneous button presses correctly. You can see the message in
                 //; MAME by changing 19A6 to 02 and 19B1 to 02. Then the 2start(down) is the only sequence.
                 //;
-                //199A: 3A 1E 20        LD      A,(hidMessSeq)      ; Has the 1st ""hidden-message" sequence ..."
+lda gamevars8080.hidMessSeq                //199A: 3A 1E 20        LD      A,(hidMessSeq)      ; Has the 1st ""hidden-message" sequence ..."
                 //199D: A7              AND     A                    ; ... been registered?
-                //199E: C2 AC 19        JP      NZ,$19AC            ; Yes ... go look for the 2nd sequence"
-                //19A1: DB 01           IN      A,(INP1)            ; Get player inputs"
-                //19A3: E6 76           AND     $76                  ; 0111_0110 Keep 2Pstart, 1Pstart, 1Pshot, 1Pleft, 1Pright"
-                //19A5: D6 72           SUB     $72                  ; 0111_0010 1st sequence: 2Pstart, 1Pshot, 1Pleft, 1Pright"
-                //19A7: C0              RET     NZ                   ; Not first sequence ... out
-                //19A8: 3C              INC     A                    ; Flag that 1st sequence ...
-                //19A9: 32 1E 20        LD      (hidMessSeq),A      ; ... has been entered"
-                //19AC: DB 01           IN      A,(INP1)            ; Check inputs for 2nd sequence"
-                //19AE: E6 76           AND     $76                  ; 0111_0110 Keep 2Pstart, 1Pstart, 1Pshot, 1Pleft, 1Pright"
-                //19B0: FE 34           CP      $34                  ; 0011_0100 2nd sequence: 1Pstart, 1Pshot, 1Pleft"
-                //19B2: C0              RET     NZ                   ; If not second sequence ignore
-                //19B3: 21 1B 2E        LD      HL,$2E1B            ; Screen coordinates"
-                //19B6: 11 F7 0B        LD      DE,$0BF7            ; Message = ""TAITO COP" (no R)"
-                //19B9: 0E 09           LD      C,$09                ; Message length"
-                //19BB: C3 F3 08        JP      PrintMessage        ; Print message and out
-                //
-                //MessageTaito:
+bne CheckHiddenMes1                //199E: C2 AC 19        JP      NZ,$19AC            ; Yes ... go look for the 2nd sequence"
+//get inputs                //19A1: DB 01           IN      A,(INP1)            ; Get player inputs"
+and #$76                //19A3: E6 76           AND     $76                  ; 0111_0110 Keep 2Pstart, 1Pstart, 1Pshot, 1Pleft, 1Pright"
+clc                //19A5: D6 72           SUB     $72                  ; 0111_0010 1st sequence: 2Pstart, 1Pshot, 1Pleft, 1Pright"
+sbc #$72
+bne CheckHiddenMesExit                //19A7: C0              RET     NZ                   ; Not first sequence ... out
+inc                //19A8: 3C              INC     A                    ; Flag that 1st sequence ...
+sta gamevars8080.hidMessSeq                //19A9: 32 1E 20        LD      (hidMessSeq),A      ; ... has been entered"
+CheckHiddenMes1:
+//get inputs                //19AC: DB 01           IN      A,(INP1)            ; Check inputs for 2nd sequence"
+and #$76                //19AE: E6 76           AND     $76                  ; 0111_0110 Keep 2Pstart, 1Pstart, 1Pshot, 1Pleft, 1Pright"
+cmp #$34                //19B0: FE 34           CP      $34                  ; 0011_0100 2nd sequence: 1Pstart, 1Pshot, 1Pleft"
+bne CheckHiddenMesExit                //19B2: C0              RET     NZ                   ; If not second sequence ignore
+loadHL($1414)                //19B3: 21 1B 2E        LD      HL,$2E1B            ; Screen coordinates"
+loadDE(MessageTaito)                //19B6: 11 F7 0B        LD      DE,$0BF7            ; Message = ""TAITO COP" (no R)"
+loadBC($0109)                //19B9: 0E 09           LD      C,$09                ; Message length"
+jmp PrintMessage                //19BB: C3 F3 08        JP      PrintMessage        ; Print message and out
+CheckHiddenMesExit:                //
+rts
+MessageTaito:                //MessageTaito:
                 //; ""*TAITO CORPORATION*"""
-                //19BE: 28 13 00 08 13 0E 26 02 0E 11 0F 0E 11      
-                //19CB: 00 13 08 0E 0D 28
+.byte $28, $13, $00, $08, $13, $0E, $26, $02, $0E, $11, $0F, $0E, $11                 //19BE: 28 13 00 08 13 0E 26 02 0E 11 0F 0E 11      
+.byte $00, $13, $08, $0E, $0D, $28                //19CB: 00 13 08 0E 0D 28
                 //
 EnableGameTasks:                //EnableGameTasks:
                 //; Enable ISR game tasks
@@ -4337,7 +4406,7 @@ SplashAni2Struct:
 .byte  $00, $00, $03, $04, $78, $14, $0B, $19, $3A, $6D, $FA, $FA, $6D, $3A, $19, $00               //1BD0: 00 00 03 04 78 14 0B 19 3A 6D FA FA 6D 3A 19 00                                      
                 //
                 //; More RAM initialization copied by 18D9
-.byte  $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $00, $00, $01, $74, $1F, $00              //1BE0: 00 00 00 00 00 00 00 00 00 01 00 00 01 74 1F 00                                      
+.byte  $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $00, $00, $01, <DemoCommands, >DemoCommands, $00              //1BE0: 00 00 00 00 00 00 00 00 00 01 00 00 01 74 1F 00                                      
 .byte  $80, $00, $00, $00, $00, $00, $22, $03, $00, $00, $12, $03, $00, $00, $36, $03               //1BF0: 80 00 00 00 00 00 1C 2F 00 00 1C 27 00 00 1C 39 
                 //
                 //AlienSprA:
@@ -4785,7 +4854,8 @@ Message1Coin:                //Message1Coin:
 DemoCommands:                //DemoCommands:
                 //; (1=Right, 2=Left)"
 .byte 1,1,0,0,1,0,2,1,0,2,1,0                //1F74: 01 01 00 00 01 00 02 01 00 02 01 00
-                //Alien Sprite Carrying 'Y'
+
+_DemoCommands:                //Alien Sprite Carrying 'Y'
                 //
                 //; Small alien pushing Y back onto screen
                 //AlienSprCA:
