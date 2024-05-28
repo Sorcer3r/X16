@@ -3247,13 +3247,14 @@ rts                //15B6: C9              RET                          ; Done
                 //    
 DrawSprite:                //DrawSprite:
                 // gamevars8080.alienCurIndex is sprite number
-                // x is offset to image
+break()                // x is offset to image
                 //HL is position (bits?)
                 //BC = $1000 . 16 lines. dont need!
                 //; Draw sprite at [DE] to screen at pixel position in HL
                 //; The hardware shift register is used in converting pixel positions
                 //; to screen coordinates.
-lda #$fc
+lda #$fc-$b0
+sta HL+1
 lda gamevars8080.alienCurIndex
 asl
 asl
