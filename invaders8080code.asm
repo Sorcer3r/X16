@@ -227,24 +227,29 @@ CursorNextAlien:                //CursorNextAlien:
                 //; When the cursor is moved here then the flag at 2000 is set to 1. This routine will not change
                 //; the cursor until the alien-draw routine at 100 clears the flag. Thus no alien is skipped.
                 //;
-rts                //0141: 3A 68 20        LD      A,(playerOK)        ; Is the player ..."
+lda gamevars8080.playerOK                //0141: 3A 68 20        LD      A,(playerOK)        ; Is the player ..."
                 //0144: A7              AND     A                    ; ... blowing up?
-                //0145: C8              RET     Z                    ; Yes ... ignore the aliens
-                //0146: 3A 00 20        LD      A,(waitOnDraw)      ; Still waiting on ..."
+beq cursorNextExit                //0145: C8              RET     Z                    ; Yes ... ignore the aliens
+lda gamevars8080.waitOnDraw                //0146: 3A 00 20        LD      A,(waitOnDraw)      ; Still waiting on ..."
                 //0149: A7              AND     A                    ; ... this alien to be drawn?
-                //014A: C0              RET     NZ                   ; Yes ... leave cursor in place
-                //014B: 3A 67 20        LD      A,(playerDataMSB)   ; Load alien-data ..."
-                //014E: 67              LD      H,A                  ; ... MSB (either 21xx or 22xx)"
-                //014F: 3A 06 20        LD      A,(alienCurIndex)   ; Load the xx part of the alien flag pointer"
-                //0152: 16 02           LD      D,$02                ; When all are gone this triggers 1A1 to return from this stack frame"
-                //0154: 3C              INC     A                    ; Have we drawn all aliens ...
-                //0155: FE 37           CP      $37                  ; ... at last position?
-                //0157: CC A1 01        CALL    Z,MoveRefAlien      ; Yes ... move the bottom/right alien and reset index to 0"
-                //015A: 6F              LD      L,A                  ; HL now points to alien flag"
-                //015B: 46              LD      B,(HL)              ; Is alien ..."
-                //015C: 05              DEC     B                    ; ... alive?
-                //015D: C2 54 01        JP      NZ,$0154            ; No ... skip to next alien"
-                //0160: 32 06 20        LD      (alienCurIndex),A   ; New alien index"
+bne cursorNextExit                //014A: C0              RET     NZ                   ; Yes ... leave cursor in place
+lda gamevars8080.playerDataMSB                //014B: 3A 67 20        LD      A,(playerDataMSB)   ; Load alien-data ..."
+sta HL+1                //014E: 67              LD      H,A                  ; ... MSB (either 21xx or 22xx)"
+lda #$02
+sta DE+1
+ldx gamevars8080.alienCurIndex                //014F: 3A 06 20        LD      A,(alienCurIndex)   ; Load the xx part of the alien flag pointer"
+                    //0152: 16 02           LD      D,$02                ; When all are gone this triggers 1A1 to return from this stack frame"
+nextAlien:
+inx                 //0154: 3C              INC     A                    ; Have we drawn all aliens ...
+cpx #$37            //0155: FE 37           CP      $37                  ; ... at last position?
+bne !+               //0157: CC A1 01        CALL    Z,MoveRefAlien       ; Yes ... move the bottom/right alien and reset index to 0
+jsr MoveRefAlien
+!:
+stx HL                //015A: 6F              LD      L,A                  ; HL now points to alien flag"
+lda (HL)                //015B: 46              LD      B,(HL)              ; Is alien ..."
+dec                //015C: 05              DEC     B                    ; ... alive?
+bne nextAlien                //015D: C2 54 01        JP      NZ,$0154            ; No ... skip to next alien"
+stx gamevars8080.alienCurIndex                //0160: 32 06 20        LD      (alienCurIndex),A   ; New alien index"
                 //0163: CD 7A 01        CALL    GetAlienCoords      ; Calculate bit position and type for index
                 //0166: 61              LD      H,C                  ; The calculation returns the MSB in C"
                 //0167: 22 0B 20        LD      (alienPosLSB),HL    ; Store new bit position"
@@ -255,47 +260,59 @@ rts                //0141: 3A 68 20        LD      A,(playerOK)        ; Is the 
                 //0171: 32 04 20        LD      (alienRow),A        ; ... row index"
                 //0174: 3E 01           LD      A,$01                ; Set the wait-flag for the ..."
                 //0176: 32 00 20        LD      (waitOnDraw),A      ; ... draw-alien routine to clear"
-                //0179: C9              RET                          ; Done
+cursorNextExit:
+rts                //0179: C9              RET                          ; Done
                 //
-                //GetAlienCoords:
+GetAlienCoords:                //GetAlienCoords:
                 //; Convert alien index in L to screen bit position in C,L."
                 //; Return alien row index (converts to type) in D.
                 //;
-                //017A: 16 00           LD      D,$00                ; Row 0"
-                //017C: 7D              LD      A,L                  ; Hold onto alien index"
-                //017D: 21 09 20        LD      HL,$2009            ; Get alien X ..."
-                //0180: 46              LD      B,(HL)              ; ... to B"
-                //0181: 23              INC     HL                   ; Get alien y ...
-                //0182: 4E              LD      C,(HL)              ; ... to C"
-                //0183: FE 0B           CP      $0B                  ; Can we take a full row off of index?
-                //0185: FA 94 01        JP      M,$0194             ; No ... we have the row"
-                //0188: DE 0B           SBC     A,$0B                ; Subtract off 11 (one whole row)"
-                //018A: 5F              LD      E,A                  ; Hold the new index"
-                //018B: 78              LD      A,B                  ; Add ..."
-                //018C: C6 10           ADD     A,$10                ; ... 16 to bit ..."
-                //018E: 47              LD      B,A                  ; ... position Y (1 row in rack)"
-                //018F: 7B              LD      A,E                  ; Restore tallied index"
-                //0190: 14              INC     D                    ; Next row
-                //0191: C3 83 01        JP      $0183                ; Keep skipping whole rows
-                //;
-                //0194: 68              LD      L,B                  ; We have the LSB (the row)"
-                //0195: A7              AND     A                    ; Are we in the right column?
-                //0196: C8              RET     Z                    ; Yes ... X and Y are right
-                //0197: 5F              LD      E,A                  ; Hold index"
-                //0198: 79              LD      A,C                  ; Add ..."
-                //0199: C6 10           ADD     A,$10                ; ... 16 to bit ..."
-                //019B: 4F              LD      C,A                  ; ... position X (1 column in rack)"
-                //019C: 7B              LD      A,E                  ; Restore index"
-                //019D: 3D              DEC     A                    ; We adjusted for 1 column
-                //019E: C3 95 01        JP      $0195                ; Keep moving over column
+stz DE+1                //017A: 16 00           LD      D,$00                ; Row 0"
+lda HL                //017C: 7D              LD      A,L                  ; Hold onto alien index"
+loadHL(gamevars8080.refAlienYr)                //017D: 21 09 20        LD      HL,$2009            ; Get alien X ..."
+sta PTR1
+lda (HL)                //0180: 46              LD      B,(HL)              ; ... to B"
+tax
+inc HL                //0181: 23              INC     HL                   ; Get alien y ...
+lda (HL)                //0182: 4E              LD      C,(HL)              ; ... to C"
+tay
+lda PTR1
+getCoordsNextRow:
+cmp #$0b                //0183: FE 0B           CP      $0B                  ; Can we take a full row off of index?
+bmi getCoordsGotRow               //0185: FA 94 01        JP      M,$0194             ; No ... we have the row"
+sec                //0188: DE 0B           SBC     A,$0B                ; Subtract off 11 (one whole row)"
+sbc #$0b
+sta DE                //018A: 5F              LD      E,A                  ; Hold the new index"
+tax                //018B: 78              LD      A,B                  ; Add ..."
+clc                //018C: C6 10           ADD     A,$10                ; ... 16 to bit ..."
+adc #$10
+txa                //018E: 47              LD      B,A                  ; ... position Y (1 row in rack)"
+lda DE                //018F: 7B              LD      A,E                  ; Restore tallied index"
+inc DE+1                //0190: 14              INC     D                    ; Next row
+bra getCoordsNextRow                //0191: C3 83 01        JP      $0183                ; Keep skipping whole rows
+getCoordsGotRow:                //;
+stx HL                //0194: 68              LD      L,B                  ; We have the LSB (the row)"
+
+getCoordsGetX:                //0195: A7              AND     A                    ; Are we in the right column?
+bne !+                //0196: C8              RET     Z                    ; Yes ... X and Y are right
+rts
+!:
+sta DE                //0197: 5F              LD      E,A                  ; Hold index"
+tya                //0198: 79              LD      A,C                  ; Add ..."
+clc                //0199: C6 10           ADD     A,$10                ; ... 16 to bit ..."
+adc #$10
+tay                //019B: 4F              LD      C,A                  ; ... position X (1 column in rack)"
+lda DE                //019C: 7B              LD      A,E                  ; Restore index"
+dec                //019D: 3D              DEC     A                    ; We adjusted for 1 column
+bra getCoordsGetX                //019E: C3 95 01        JP      $0195                ; Keep moving over column
                 //
-                //MoveRefAlien:
+MoveRefAlien:                //MoveRefAlien:
                 //; The ""reference alien" is the bottom left. All other aliens are drawn relative to this"
                 //; reference. This routine moves the reference alien (the delta is set elsewhere) and toggles
                 //; the animation frame number between 0 and 1.
                 //;
-                //01A1: 15              DEC     D                    ; This decrements with each call to move
-                //01A2: CA CD 01        JP      Z,ReturnTwo         ; Return out of TWO call frames (only used if no aliens left)"
+break()                //01A1: 15              DEC     D                    ; This decrements with each call to move
+lda #10                //01A2: CA CD 01        JP      Z,ReturnTwo         ; Return out of TWO call frames (only used if no aliens left)"
                 //01A5: 21 06 20        LD      HL,$2006            ; Set current alien ..."
                 //01A8: 36 00           LD      (HL),$00            ; ... index to 0"
                 //01AA: 23              INC     HL                   ; Point to DeltaX
@@ -546,8 +563,8 @@ cmp #$ff                //024C: FE FF           CP      $FF                  ; .
                 //
                 //
 GameObj0:                //GameObj0:
-                //; Game object 0: Move/draw the player
-                //;
+break()                //; Game object 0: Move/draw the player
+lda #0                //;
                 //; This task is only called at the mid-screen ISR. It ALWAYS does its work here, even though"
                 //; the player can be on the top or bottom of the screen (not rotated).
                 //;
@@ -1179,8 +1196,8 @@ GameObj4:                //GameObj4:
                 //068C: 7E              LD      A,(HL)              ; Is it time ..."
                 //068D: A7              AND     A                    ; ... for a saucer?
 beq squigglyShot                //068E: CA 0F 05        JP      Z,$050F             ; No ... go process squiggly shot"
-                //0691: 3A 56 20        LD      A,(squShotStepCnt)  ; Is there a ..."
-                //0694: A7              AND     A                    ; ... squiggly shot going?
+break()                //0691: 3A 56 20        LD      A,(squShotStepCnt)  ; Is there a ..."
+lda #4                //0694: A7              AND     A                    ; ... squiggly shot going?
                 //0695: C2 0F 05        JP      NZ,$050F            ; Yes ... go handle squiggly shot"
                 //
                 //0698: 23              INC     HL                   ; Saucer on screen flag
