@@ -321,12 +321,12 @@ lda DE+1               //01A1: 15              DEC     D                    ; Th
 dec
 sta DE+1
 beq ReturnTwo                //01A2: CA CD 01        JP      Z,ReturnTwo         ; Return out of TWO call frames (only used if no aliens left)"
-                //01A5: 21 06 20        LD      HL,$2006            ; Set current alien ..."
+loadHL(gamevars8080.alienCurIndex)                //01A5: 21 06 20        LD      HL,$2006            ; Set current alien ..."
 stz gamevars8080.alienCurIndex                //01A8: 36 00           LD      (HL),$00            ; ... index to 0"
                 //01AA: 23              INC     HL                   ; Point to DeltaX
 ldx gamevars8080.refAlienDYr                //01AB: 4E              LD      C,(HL)              ; Load DX into C"
 stz gamevars8080.refAlienDYr                //01AC: 36 00           LD      (HL),$00            ; Set DX to 0"
-                //01AE: CD D9 01        CALL    AddDelta            ; Move alien
+jsr AddDelta               //01AE: CD D9 01        CALL    AddDelta            ; Move alien
                 //01B1: 21 05 20        LD      HL,$2005            ; Alien animation frame number"
 lda gamevars8080.alienFrame                //01B4: 7E              LD      A,(HL)              ; Toggle ..."
 eor #$01                //01B5: 3C              INC     A                    ; ... animation ...
@@ -3875,9 +3875,9 @@ jsr DrawStatus                //18DC: CD 56 19        CALL    DrawStatus        
 lda #$08                //18DF: 3E 08           LD      A,$08                ; Set alien ..."
 sta gamevars8080.aShotReloadRate               //18E1: 32 CF 20        LD      (aShotReloadRate),A ; ... shot reload rate"
 //testing
-//lda #2
-// sta gamevars8080.isrSplashTask
-// stz gamevars8080.splashAnimate
+lda #2
+ sta gamevars8080.isrSplashTask
+ stz gamevars8080.splashAnimate
 
 jmp afterIniSplash                //18E4: C3 EA 0A        JP      $0AEA                ; Top of splash screen loop
                 //
@@ -4325,7 +4325,7 @@ rts
                 //; 00   Reached Y flag
                 //; 1C20 Base iamge (small alien)
 SplashAni1Struct:
-.byte $00, $00, $FF, $40, $FF, $00, $01, $10, $7A, $00, $20, $1C                  //1A95: 00 00 FF B8 FE 20 1C 10 9E 00 20 1C   
+.byte $00, $00, $FF, $40, $FF, $04, $05, $10, $7A, $00, $20, $1C                  //1A95: 00 00 FF B8 FE 20 1C 10 9E 00 20 1C   
     //changed bytes 5/6 to sprite image numbers for alien
                 //
                 //ShotReloadRate:
