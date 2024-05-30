@@ -165,7 +165,7 @@ rts                //0087: C9              RET                          ; Return
                 //; to make the next function begin at 0100. Room for expansion?
                 //
 DrawAlien:                //DrawAlien:
-                //; 2006 holds the index into the alien flag data grid. 2067 holds the MSB of the pointer (21xx or 22xx).
+break()                //; 2006 holds the index into the alien flag data grid. 2067 holds the MSB of the pointer (21xx or 22xx).
                 //; If there is an alien exploding time it down. Otherwise draw the alien if it alive (or skip if
                 //; it isn't). If an alien is drawn (or blank) then the 2000 alien-drawing flag is cleared.
                 //;
@@ -206,7 +206,7 @@ lda gamevars8080.alienPosLSB                //012E: 2A 0B 20        LD      HL,(
 sta HL
 lda gamevars8080.alienPosMSB
 sta HL+1
-loadBC($1000)                //0131: 06 10           LD      B,$10                ; 16 rows in alien sprites"
+//loadBC($1000)                //0131: 06 10           LD      B,$10                ; 16 rows in alien sprites"
 jsr DrawSprite                //0133: CD D3 15        CALL    DrawSprite          ; Draw shifted sprite
 DrawAlienExit:                //;
                 //0136: AF              XOR     A                    ; Let the ISR routine ...
@@ -250,16 +250,21 @@ lda (HL)                //015B: 46              LD      B,(HL)              ; Is
 dec                //015C: 05              DEC     B                    ; ... alive?
 bne nextAlien                //015D: C2 54 01        JP      NZ,$0154            ; No ... skip to next alien"
 stx gamevars8080.alienCurIndex                //0160: 32 06 20        LD      (alienCurIndex),A   ; New alien index"
-                //0163: CD 7A 01        CALL    GetAlienCoords      ; Calculate bit position and type for index
-                //0166: 61              LD      H,C                  ; The calculation returns the MSB in C"
-                //0167: 22 0B 20        LD      (alienPosLSB),HL    ; Store new bit position"
+jsr GetAlienCoords                //0163: CD 7A 01        CALL    GetAlienCoords      ; Calculate bit position and type for index
+sty HL+1                //0166: 61              LD      H,C                  ; The calculation returns the MSB in C (y)
+lda HL+1                //0167: 22 0B 20        LD      (alienPosLSB),HL    ; Store new bit position"
+sta gamevars8080.alienPosMSB
+lda HL
+sta gamevars8080.alienPosLSB
                 //016A: 7D              LD      A,L                  ; Has this alien ..."
-                //016B: FE 28           CP      $28                  ; ... reached the end of screen?
-                //016D: DA 71 19        JP      C,$1971             ; Yes ... kill the player"
-                //0170: 7A              LD      A,D                  ; This alien's ..."
-                //0171: 32 04 20        LD      (alienRow),A        ; ... row index"
-                //0174: 3E 01           LD      A,$01                ; Set the wait-flag for the ..."
-                //0176: 32 00 20        LD      (waitOnDraw),A      ; ... draw-alien routine to clear"
+cmp #$28                //016B: FE 28           CP      $28                  ; ... reached the end of screen?
+bcc !+                //016D: DA 71 19        JP      C,$1971             ; Yes ... kill the player"
+jmp AlienAtBottom
+!:
+lda DE+1               //0170: 7A              LD      A,D                  ; This alien's ..."
+sta gamevars8080.alienRow                //0171: 32 04 20        LD      (alienRow),A        ; ... row index"
+lda #$01                //0174: 3E 01           LD      A,$01                ; Set the wait-flag for the ..."
+sta gamevars8080.waitOnDraw                //0176: 32 00 20        LD      (waitOnDraw),A      ; ... draw-alien routine to clear"
 cursorNextExit:
 rts                //0179: C9              RET                          ; Done
                 //
@@ -269,8 +274,9 @@ GetAlienCoords:                //GetAlienCoords:
                 //;
 stz DE+1                //017A: 16 00           LD      D,$00                ; Row 0"
 lda HL                //017C: 7D              LD      A,L                  ; Hold onto alien index"
-loadHL(gamevars8080.refAlienYr)                //017D: 21 09 20        LD      HL,$2009            ; Get alien X ..."
 sta PTR1
+loadHL(gamevars8080.refAlienYr)                //017D: 21 09 20        LD      HL,$2009            ; Get alien X ..."
+
 lda (HL)                //0180: 46              LD      B,(HL)              ; ... to B"
 tax
 inc HL                //0181: 23              INC     HL                   ; Get alien y ...
@@ -311,23 +317,25 @@ MoveRefAlien:                //MoveRefAlien:
                 //; reference. This routine moves the reference alien (the delta is set elsewhere) and toggles
                 //; the animation frame number between 0 and 1.
                 //;
-break()                //01A1: 15              DEC     D                    ; This decrements with each call to move
-lda #10                //01A2: CA CD 01        JP      Z,ReturnTwo         ; Return out of TWO call frames (only used if no aliens left)"
+lda DE+1               //01A1: 15              DEC     D                    ; This decrements with each call to move
+dec
+sta DE+1
+beq ReturnTwo                //01A2: CA CD 01        JP      Z,ReturnTwo         ; Return out of TWO call frames (only used if no aliens left)"
                 //01A5: 21 06 20        LD      HL,$2006            ; Set current alien ..."
-                //01A8: 36 00           LD      (HL),$00            ; ... index to 0"
+stz gamevars8080.alienCurIndex                //01A8: 36 00           LD      (HL),$00            ; ... index to 0"
                 //01AA: 23              INC     HL                   ; Point to DeltaX
-                //01AB: 4E              LD      C,(HL)              ; Load DX into C"
-                //01AC: 36 00           LD      (HL),$00            ; Set DX to 0"
+ldx gamevars8080.refAlienDYr                //01AB: 4E              LD      C,(HL)              ; Load DX into C"
+stz gamevars8080.refAlienDYr                //01AC: 36 00           LD      (HL),$00            ; Set DX to 0"
                 //01AE: CD D9 01        CALL    AddDelta            ; Move alien
                 //01B1: 21 05 20        LD      HL,$2005            ; Alien animation frame number"
-                //01B4: 7E              LD      A,(HL)              ; Toggle ..."
-                //01B5: 3C              INC     A                    ; ... animation ...
+lda gamevars8080.alienFrame                //01B4: 7E              LD      A,(HL)              ; Toggle ..."
+eor #$01                //01B5: 3C              INC     A                    ; ... animation ...
                 //01B6: E6 01           AND     $01                  ; ... number between ...
-                //01B8: 77              LD      (HL),A              ; ... 0 and 1"
-                //01B9: AF              XOR     A                    ; Alien index in A is now 0
-                //01BA: 21 67 20        LD      HL,$2067            ; Restore H ..."
-                //01BD: 66              LD      H,(HL)              ; ... to player data MSB (21 or 22)"
-                //01BE: C9              RET                          ; Done
+sta gamevars8080.alienFrame                //01B8: 77              LD      (HL),A              ; ... 0 and 1"
+lda #$00                //01B9: AF              XOR     A                    ; Alien index in A is now 0
+ldx gamevars8080.playerDataMSB                //01BA: 21 67 20        LD      HL,$2067            ; Restore H ..."
+stx HL+1                //01BD: 66              LD      H,(HL)              ; ... to player data MSB (21 or 22)"
+rts                //01BE: C9              RET                          ; Done
                 //
                 //01BF: 00 ; ** Why?
                 //
@@ -343,12 +351,13 @@ dex                     //01C8: 05              DEC     B                    ; A
 bpl InitAliens1         //01C9: C2 C5 01        JP      NZ,$01C5            ; No ... keep looping"
 rts                     //01CC: C9              RET                          ; Done
                 //
-                //ReturnTwo:
+ReturnTwo:                //ReturnTwo:
                 //; If there are no aliens left on the screen then MoveDrawAlien comes here which returns from the
                 //; caller's stack frame.
                 //;
-                //01CD: E1              POP     HL                   ; Drop return to caller
-                //01CE: C9              RET                          ; Return to caller's caller
+pla                //01CD: E1              POP     HL                   ; Drop return to caller
+pla
+rts                //01CE: C9              RET                          ; Return to caller's caller
                 //Misc
 DrawBottomLine:                //DrawBottomLine:
                 //; Draw a 1px line across the player's stash at the bottom of the screen.
@@ -509,7 +518,7 @@ loadHL(gamevars8080.obj0TimerMSB)                //0248: 21 10 20        LD     
 RunGameObjs1:
 break()                //024B: 7E              LD      A,(HL)              ; Have we reached the ..."
 cmp #$ff                //024C: FE FF           CP      $FF                  ; ... end of the object list?
-                //024E: C8              RET     Z                    ; Yes ... done
+rts                //024E: C8              RET     Z                    ; Yes ... done
                 //024F: FE FE           CP      $FE                  ; Is object active?
                 //0251: CA 81 02        JP      Z,$0281             ; No ... skip it"
                 //0254: 23              INC     HL                   ; xx01
@@ -3270,6 +3279,11 @@ break()                // x is offset to image
                 //; Draw sprite at [DE] to screen at pixel position in HL
                 //; The hardware shift register is used in converting pixel positions
                 //; to screen coordinates.
+lda HL
+sta DE
+lda HL+1
+sta DE+1
+
 lda #$fc-$b0
 sta HL+1
 lda gamevars8080.alienCurIndex
@@ -3286,7 +3300,7 @@ lda SpriteArray.addressTableLo,x
 sta VERADATA0
 lda SpriteArray.addressTableHi,x
 sta VERADATA0
-lda (HL) //gamevars8080.splashXr
+lda (DE) //gamevars8080.splashXr
 clc
 adc #$30
 sta VERADATA0
@@ -3468,7 +3482,8 @@ rts                //166A: C9              RET                          ; Done
                 //16E0: CD D1 19        CALL    EnableGameTasks     ; Enable ISR game tasks
                 //16E3: C3 89 0B        JP      $0B89                ; Print credit information and do splash
                 //
-                //16E6: 31 00 24        LD      SP,$2400            ; Reset stack"
+endOfRound:
+break()                //16E6: 31 00 24        LD      SP,$2400            ; Reset stack"
                 //16E9: FB              EI                           ; Enable interrupts
                 //16EA: AF              XOR     A                    ; Flag ...
                 //16EB: 32 15 20        LD      (playerAlive),A     ; ... player is shot"
@@ -3777,8 +3792,7 @@ SplashSprite:                //SplashSprite:
 addressRegister(0,$1fc00,1,0)
 
 loadHL(gamevars8080.splashAnForm)               //1868: 21 C2 20        LD      HL,$20C2            ; Descriptor"
-inc gamevars8080.splashAnForm
-                                           //186B: 34              INC     (HL)                 ; Change image
+inc gamevars8080.splashAnForm                   //186B: 34              INC     (HL)                 ; Change image
 inc HL                      //186C: 23              INC     HL                   ; Point to delta-x
 lda (HL)                //186D: 4E              LD      C,(HL)              ; Get delta-x"
 jsr AddDelta                //186E: CD D9 01        CALL    AddDelta            ; Add delta-X and delta-Y to X and Y
@@ -3861,7 +3875,7 @@ jsr DrawStatus                //18DC: CD 56 19        CALL    DrawStatus        
 lda #$08                //18DF: 3E 08           LD      A,$08                ; Set alien ..."
 sta gamevars8080.aShotReloadRate               //18E1: 32 CF 20        LD      (aShotReloadRate),A ; ... shot reload rate"
 //testing
-// lda #0
+//lda #2
 // sta gamevars8080.isrSplashTask
 // stz gamevars8080.splashAnimate
 
@@ -4028,9 +4042,10 @@ jmp DrawNumCredits                //1968: C3 47 19        JP      DrawNumCredits
                 //196B: CD DC 19        CALL    SoundBits3Off       ; From 170B with B=FB. Turn off player shot sound
                 //196E: C3 71 16        JP      $1671                ; Update high-score if player's score is greater
                 //
-                //1971: 3E 01           LD      A,$01                ; Set flag that ..."
-                //1973: 32 6D 20        LD      (invaded),A         ; ... aliens reached bottom of screen"
-                //1976: C3 E6 16        JP      $16E6                ; End of round
+AlienAtBottom:
+lda #$01                //1971: 3E 01           LD      A,$01                ; Set flag that ..."
+sta gamevars8080.invaded                //1973: 32 6D 20        LD      (invaded),A         ; ... aliens reached bottom of screen"
+jmp endOfRound                //1976: C3 E6 16        JP      $16E6                ; End of round
                //
                 //1979: CD D7 19        CALL    DsableGameTasks     ; Disable ISR game tasks
                 //197C: CD 47 19        CALL    DrawNumCredits      ; Display number of credits on screen
