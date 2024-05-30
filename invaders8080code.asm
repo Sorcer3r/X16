@@ -3875,9 +3875,9 @@ jsr DrawStatus                //18DC: CD 56 19        CALL    DrawStatus        
 lda #$08                //18DF: 3E 08           LD      A,$08                ; Set alien ..."
 sta gamevars8080.aShotReloadRate               //18E1: 32 CF 20        LD      (aShotReloadRate),A ; ... shot reload rate"
 //testing
-lda #2
- sta gamevars8080.isrSplashTask
- stz gamevars8080.splashAnimate
+//lda #2
+// sta gamevars8080.isrSplashTask
+// stz gamevars8080.splashAnimate
 
 jmp afterIniSplash                //18E4: C3 EA 0A        JP      $0AEA                ; Top of splash screen loop
                 //
