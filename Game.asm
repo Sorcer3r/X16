@@ -45,7 +45,7 @@ main: {
     lda #(moveSpritesInt >> 8) & $ff
     sta $315
 	restoreVeraAddrInfo() 
-	lda #$40			// first line int is line 64 for red colour1
+	lda #$30			// first line int is line 64 for red colour1
 	sta VERASCANLINE 
 	lda VERAINTENABLE  
 	and #$7f		// clear bit 8 line int

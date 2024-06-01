@@ -32,6 +32,8 @@ notline:
     sta VERAINTENABLE
     lda #$01
     sta $ff     // vsync semaphore flag to rest of code.
+    jsr inv8080.ScanLine224
+    //do this at vsync?
 exit:
     lda VERAINTSTATUS 
     ora #$07  // set bit 1,2 to clear int flag (handle vsync in main loop!)
@@ -44,15 +46,15 @@ lineInt:
     and #$40
     bne lowerHalf               // are we below line 255 (480 lines each line is 2 pixels in double mode)
     lda VERASCANLINE
-    cmp #$40    
+    cmp #$30    
     bne line1
     stz VERADATA0               // set colour to red for spaceship line if line $30 (24d)
     lda #$0f
     sta VERADATA0
-    lda #$60                    // next int at line $50 (40d) to set back to white
+    lda #$58                    // next int at line $50 (40d) to set back to white
     bra lineExit
 line1:                          // gets here if in top half and not line 48d $30
-    cmp #$60
+    cmp #$58
     bne line2    
     lda #$ff                    // set colour back to white
     sta VERADATA0
@@ -81,16 +83,16 @@ lowerHalf:
     lda #$f0
     sta VERADATA0
     stz VERADATA0
-    lda #$c2            // set next line int to $38 (48d) for red (vblank will occor before to reset white for score)
+    lda #$cf            // set next line int to $38 (48d) for red (vblank will occor before to reset white for score)
     bra lineExit
 lowerHalf2:
-    cmp #$c2            // bottom line colour 0 is white
+    cmp #$cf           // bottom line colour 0 is white
     bne lineExit2                // no then exit
     lda #$ff
     sta VERADATA0
     sta VERADATA0
-    jsr inv8080.ScanLine224
-    lda #$40
+    //jsr inv8080.ScanLine224 >>moved to vsync for now
+    lda #$30
     bra lineExit
 
 spriteCollision:{

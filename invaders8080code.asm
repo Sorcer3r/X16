@@ -165,7 +165,7 @@ rts                //0087: C9              RET                          ; Return
                 //; to make the next function begin at 0100. Room for expansion?
                 //
 DrawAlien:                //DrawAlien:
-break()                //; 2006 holds the index into the alien flag data grid. 2067 holds the MSB of the pointer (21xx or 22xx).
+//break()                //; 2006 holds the index into the alien flag data grid. 2067 holds the MSB of the pointer (21xx or 22xx).
                 //; If there is an alien exploding time it down. Otherwise draw the alien if it alive (or skip if
                 //; it isn't). If an alien is drawn (or blank) then the 2000 alien-drawing flag is cleared.
                 //;
@@ -323,9 +323,9 @@ sta DE+1
 beq ReturnTwo                //01A2: CA CD 01        JP      Z,ReturnTwo         ; Return out of TWO call frames (only used if no aliens left)"
 loadHL(gamevars8080.alienCurIndex)                //01A5: 21 06 20        LD      HL,$2006            ; Set current alien ..."
 stz gamevars8080.alienCurIndex                //01A8: 36 00           LD      (HL),$00            ; ... index to 0"
-                //01AA: 23              INC     HL                   ; Point to DeltaX
-ldx gamevars8080.refAlienDYr                //01AB: 4E              LD      C,(HL)              ; Load DX into C"
-stz gamevars8080.refAlienDYr                //01AC: 36 00           LD      (HL),$00            ; Set DX to 0"
+inc HL                //01AA: 23              INC     HL                   ; Point to DeltaX
+lda gamevars8080.refAlienDYr                //01AB: 4E              LD      C,(HL)              ; Load DX into C"
+//stz gamevars8080.refAlienDYr                //01AC: 36 00           LD      (HL),$00            ; Set DX to 0"
 jsr AddDelta               //01AE: CD D9 01        CALL    AddDelta            ; Move alien
                 //01B1: 21 05 20        LD      HL,$2005            ; Alien animation frame number"
 lda gamevars8080.alienFrame                //01B4: 7E              LD      A,(HL)              ; Toggle ..."
@@ -362,7 +362,7 @@ rts                //01CE: C9              RET                          ; Return
 DrawBottomLine:                //DrawBottomLine:
                 //; Draw a 1px line across the player's stash at the bottom of the screen.
                 //;
-addressRegister(0,$1cb0c,1,0)
+addressRegister(0,$1cc0c,1,0)
 lda #$3e                //01CF: 3E 01           LD      A,$01                ; Bit 1 set ... going to draw a 1-pixel stripe down left side"
 ldy #$01
 ldx #$1c               //01D1: 06 E0           LD      B,$E0                ; All the way down the screen 224
@@ -485,7 +485,7 @@ CopyShields:                //CopyShields:
 rts                //0245: C3 35 02        JP      $0235                ; Continue with next shield
                 //Game Objects
 RunGameObjs:                //RunGameObjs:
-break()                //; Process game objects. Each game object has a 16 byte structure. The handler routine for the object
+//break()                //; Process game objects. Each game object has a 16 byte structure. The handler routine for the object
                 //; is at xx03 and xx04 of the structure. The pointer to xx04 is pushed onto the stack before calling
                 //; the handler.
                 //;
@@ -516,7 +516,7 @@ break()                //; Process game objects. Each game object has a 16 byte 
                 //;
 loadHL(gamevars8080.obj0TimerMSB)                //0248: 21 10 20        LD      HL,$2010            ; First game object (active player)"
 RunGameObjs1:
-break()                //024B: 7E              LD      A,(HL)              ; Have we reached the ..."
+//break()                //024B: 7E              LD      A,(HL)              ; Have we reached the ..."
 cmp #$ff                //024C: FE FF           CP      $FF                  ; ... end of the object list?
 rts                //024E: C8              RET     Z                    ; Yes ... done
                 //024F: FE FE           CP      $FE                  ; Is object active?
@@ -572,7 +572,7 @@ rts                //024E: C8              RET     Z                    ; Yes ..
                 //
                 //
 GameObj0:                //GameObj0:
-break()                //; Game object 0: Move/draw the player
+//break()                //; Game object 0: Move/draw the player
 lda #0                //;
                 //; This task is only called at the mid-screen ISR. It ALWAYS does its work here, even though"
                 //; the player can be on the top or bottom of the screen (not rotated).
@@ -1985,7 +1985,7 @@ continueSplash:
                 //0B42: 06 0A           LD      B,$0A                ; 10 rows"
                 //0B44: CD CB 14        CALL    ClearSmallSprite    ; Clear a one byte sprite at HL
     jsr TwoSecDelay            //0B47: CD B6 0A        CALL    TwoSecDelay         ; Two second delay
-    break()            //;
+    //break()            //;
 playDemo:                //; Play demo
 jsr ClearPlayField              //0B4A: CD D6 09        CALL    ClearPlayField      ; Clear playfield
 lda gamevars8080.p1ShipsRem                //0B4D: 3A FF 21        LD      A,(p1ShipsRem)      ; Number of ships for player-1"
@@ -3273,16 +3273,16 @@ rts                //15B6: C9              RET                          ; Done
                 //    
 DrawSprite:                //DrawSprite:
                 // gamevars8080.alienCurIndex is sprite number
-break()                // x is offset to image
-                //HL is position (bits?)
+//break()                // x is offset to image
+                //HL is position (bits?) x/y??
                 //BC = $1000 . 16 lines. dont need!
                 //; Draw sprite at [DE] to screen at pixel position in HL
                 //; The hardware shift register is used in converting pixel positions
                 //; to screen coordinates.
-lda HL
-sta DE
-lda HL+1
-sta DE+1
+//lda HL
+//sta DE
+//lda HL+1
+//sta DE+1
 
 lda #$fc-$b0
 sta HL+1
@@ -3295,19 +3295,21 @@ inc HL+1    // carry if we went past 255 in L
 !:
 sta HL
 addressRegisterByHL(0,1,1,0)  //point to sprite number based on currentalien
+lda gamevars8080.alienCurIndex
+jsr ConvToScrPixel  //puts sprite x/y in HL from alienrefx/y
 
 lda SpriteArray.addressTableLo,x
 sta VERADATA0
 lda SpriteArray.addressTableHi,x
 sta VERADATA0
-lda (DE) //gamevars8080.splashXr
+lda HL+1 //gamevars8080.splashXr
 clc
 adc #$30
 sta VERADATA0
 lda #$00
 adc #$00
 sta VERADATA0
-lda (HL+1)   //gamevars8080.splashYr
+lda HL   //gamevars8080.splashYr
 sta VERADATA0
 stz VERADATA0
 lda #%00001100
@@ -3875,7 +3877,7 @@ jsr DrawStatus                //18DC: CD 56 19        CALL    DrawStatus        
 lda #$08                //18DF: 3E 08           LD      A,$08                ; Set alien ..."
 sta gamevars8080.aShotReloadRate               //18E1: 32 CF 20        LD      (aShotReloadRate),A ; ... shot reload rate"
 //testing
-//lda #2
+// lda #2
 // sta gamevars8080.isrSplashTask
 // stz gamevars8080.splashAnimate
 
@@ -3932,7 +3934,7 @@ lda #$01
 sta BC+1        //colour
 lda #$0c      // offset 6*2 chars since screen is 40 and real is 28          //191C: 21 1E 24        LD      HL,$241E            ; Screen coordinates"line 2(256pix*28 chars)
 sta HL
-lda #$01    //2nd row
+lda #$00    //top row
 sta HL+1
 lda #<MessageScore                 //191F: 11 E4 1A        LD      DE,$1AE4            ; Score header message"
 sta DE
@@ -3972,28 +3974,48 @@ sta HL
 jmp Print4Digits                //1939: C3 AD 09        JP      Print4Digits        ; Print 4 digits in DE
                 //
 testchars:
-lda #1
-sta BC
-lda #1
-sta BC+1
-lda #14
+// lda #1
+// sta BC
+// lda #1
+// sta BC+1
+// lda #14
+// sta HL
+// lda #$1c
+// sta HL+1
+// lda #<testchar1
+// sta DE
+// lda #>testchar1
+// sta DE+1
+// jsr PrintMessage
+// lda #18
+// sta HL
+// lda #<testchar2
+// sta DE
+// lda #8
+// sta BC
+// lda #5
+// sta BC+1
+// jmp PrintMessage
+ldx #30
+lda #00
 sta HL
-lda #$1c
+lda #$00
 sta HL+1
-lda #<testchar1
-sta DE
-lda #>testchar1
-sta DE+1
-jsr PrintMessage
-lda #18
-sta HL
-lda #<testchar2
-sta DE
-lda #8
-sta BC
-lda #5
-sta BC+1
-jmp PrintMessage
+lda #00
+nextTest:
+pha
+phx
+jsr DrawHexByte
+inc HL+1
+stz HL
+plx
+pla
+sed
+inc
+cld
+dex
+bne nextTest
+rts
 testchar1:
 .byte 29
 testchar2:
@@ -4004,7 +4026,7 @@ lda #$07                //193C: 0E 07           LD      C,$07                ; 7
 sta BC
 lda #$2e               //193E: 21 01 35        LD      HL,$3501            ; Screen coordinates"
 sta HL
-lda #$1c
+lda #$1d
 sta HL+1
 lda #<MessageCredit                //1941: 11 A9 1F        LD      DE,$1FA9            ; Message = ""CREDIT """
 sta DE
@@ -4016,7 +4038,7 @@ DrawNumCredits:                //DrawNumCredits:
                 //; Display number of credits on screen
 lda #$3c                //194A: 21 01 3C        LD      HL,$3C01            ; Screen coordinates"
 sta HL
-lda #$1c
+lda #$1d
 sta HL+1
 lda gamevars8080.numCoins                //1947: 3A EB 20        LD      A,(numCoins)        ; Number of credits"
 jmp DrawHexByte                //194D: C3 B2 09        JP      DrawHexByte         ; Character to screen
@@ -4036,7 +4058,7 @@ jsr PrintP1Score                //195C: CD 25 19        CALL    $1925           
 jsr PrintP2Score                //195F: CD 2B 19        CALL    $192B                ; Print player 2 score
 jsr PrintHiScore                //1962: CD 50 19        CALL    PrintHiScore        ; Print hi score
 jsr printCreditMsg                //1965: CD 3C 19        CALL    $193C                ; Print credit lable
-//jsr testchars
+jsr testchars
 jmp DrawNumCredits                //1968: C3 47 19        JP      DrawNumCredits      ; Number of credits
                 //
                 //196B: CD DC 19        CALL    SoundBits3Off       ; From 170B with B=FB. Turn off player shot sound
@@ -4140,7 +4162,7 @@ rts                //19DB: 00                                            ; ** He
                 //
 DrawNumShips:                //DrawNumShips: r $1c c $14
 sta PTR1                //; Show ships remaining in hold for the player
-loadHL($1c12)                //19E6: 21 01 27        LD      HL,$2701            ; Screen coordinates"
+loadHL($1d12)                //19E6: 21 01 27        LD      HL,$2701            ; Screen coordinates"
 lda PTR1                //19E9: CA FA 19        JP      Z,$19FA             ; None in reserve ... skip display"
 beq clearShipLives
                 //; Draw line of ships
@@ -4259,6 +4281,40 @@ rts                //1A3A: C9              RET                          ; Done
                 //1A59: 67              LD      H,A                  ; Back to H"
                 //1A5A: C1              POP     BC                   ; Restore B
                 //1A5B: C9              RET                          ; Done
+//
+ConvToScrPixel:         //puts sprite x/y in HL from alienrefx/y for alien in a 
+// calc row (11/row)
+// x = x + (16*alien mod 11)
+//y = y- 16 * rownumbe r(0 is bttom row)
+ldy #$ff
+convRowCount:
+iny
+sec
+sbc #$0B //11
+bcs convRowCount
+adc #$0b
+// a = x (0-10)
+// y = y (0-4)
+asl
+asl
+asl
+asl //*16
+//clc  should be clear anyway!
+adc gamevars8080.refAlienYr
+sta HL+1
+tya
+asl
+asl
+asl
+asl
+sta PTR1
+lda gamevars8080.refAlienXr
+sec
+sbc PTR1
+sta HL
+rts
+
+
                 //
                 //ClearScreen:
                 //; Clear the screen
@@ -4304,7 +4360,7 @@ pha                //1A84: F5              PUSH    AF                   ; Preser
 dec                //1A85: 3D              DEC     A                    ; Remove a ship from the stash
 sta (HL)                //1A86: 77              LD      (HL),A              ; New number of ships"
 jsr DrawNumShips                //1A87: CD E6 19        CALL    DrawNumShips        ; Draw the line of ships
-loadHL($1c0e)                //1A8B: 21 01 25        LD      HL,$2501            ; Screen coordinates"
+loadHL($1d0e)                //1A8B: 21 01 25        LD      HL,$2501            ; Screen coordinates"
 pla                //1A8A: F1              POP     AF                   ; Restore number
                 //1A8E: E6 0F           AND     $0F                  ; Make sure it is a digit
 jmp printCharAtHL                //1A90: C3 C5 09        JP      $09C5                ; Print number remaining
@@ -4366,7 +4422,7 @@ MessageScore:                //MessageScore:
                 //; Coppied to RAM (2000) C0 bytes as initialization.
                 //; See the description of RAM at the top of this file for the details on this data.
 InitializationDATA:                //
-.byte  $01, $00, $00, $10, $00, $00, $00, $00, $02, $78, $38, $78, $38, $00, $F8, $00               //1B00: 01 00 00 10 00 00 00 00 02 78 38 78 38 00 F8 00
+.byte  $01, $00, $00, $10, $00, $00, $00, $02, $00, $18, $78, $18, $78, $00, $08, $00               //1B00: 01 00 00 10 00 00 00 00 02 78 38 78 38 00 F8 00
 .byte  $00, $80, $00, <GameObj0, >GameObj0, $FF, $05, $0C, $60, $1C, $20, $30, $10, $01, $00, $00    //gameobj0 data          //1B10: 00 80 00 8E 02 FF 05 0C 60 1C 20 30 10 01 00 00   
 .byte  $00, $00, $00, <GameObj1, >GameObj1, $00, $10, $90, $1C, $28, $30, $01, $04, $00, $FF, $FF    //gameobj1 data          //1B20: 00 00 00 BB 03 00 10 90 1C 28 30 01 04 00 FF FF   
 .byte  $00, $00, $02, <GameObj2, >GameObj2, $00, $00, $00, $00, $00, $04, $EE, $1C, $00, $00, $03    //gameobj2 data           //1B30: 00 00 02 76 04 00 00 00 00 00 04 EE 1C 00 00 03    
@@ -4440,7 +4496,7 @@ SplashAni2Struct:
                 //
                 //; More RAM initialization copied by 18D9
 .byte  $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $00, $00, $01, <DemoCommands, >DemoCommands, $00              //1BE0: 00 00 00 00 00 00 00 00 00 01 00 00 01 74 1F 00                                      
-.byte  $80, $00, $00, $00, $00, $00, $22, $03, $00, $00, $12, $03, $00, $00, $36, $03               //1BF0: 80 00 00 00 00 00 1C 2F 00 00 1C 27 00 00 1C 39 
+.byte  $80, $00, $00, $00, $00, $00, $22, $02, $00, $00, $12, $02, $00, $00, $36, $02               //1BF0: 80 00 00 00 00 00 1C 2F 00 00 1C 27 00 00 1C 39 
                 //
                 //AlienSprA:
                 //Alien Images
