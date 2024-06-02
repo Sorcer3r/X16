@@ -228,4 +228,7 @@ p2RefAlienYr:	    .byte	0	//22FC Player 2 reference-alien Y coordinate
 p2RefAlienXr:	    .byte	0	//22FD Player 2 reference-alien X coordinate
 p2RackCnt:	        .byte	0	//22FE Player 2 rack-count (starts at 0 but get incremented to 1-8)
 p2ShipsRem:	        .byte	0	//22FF Ships remaining after current dies
+
+EdgeCheckX:         .fill $37,0 // 55 spaces to store alien X positions, used for edge check and collision location calcs(maybe)?
+EdgeCheckY:         .fill $37,0 // 55 spaces to store Alien Y positions, to be used for collision location calc(maybe)?
 }

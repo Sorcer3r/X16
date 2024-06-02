@@ -175,7 +175,8 @@ lda gamevars8080.alienIsExploding                 //0100: 21 02 20        LD    
 beq !+
 jmp AExplodeTime                //0105: C2 38 15        JP      NZ,AExplodeTime     ; Yes ... go time it down and out"
 !:
-                //;
+stz gamevars8080.alienPosLSB                //zero lsb msb for edge check array
+stz gamevars8080.alienPosMSB
                 //0108: E5              PUSH    HL                   ; 2002 on the stack
 lda gamevars8080.alienCurIndex                //0109: 3A 06 20        LD      A,(alienCurIndex)   ; Get alien index ..."
 sta HL                //010C: 6F              LD      L,A                  ; ... for the 21xx or 22xx pointer"
@@ -202,13 +203,28 @@ clc               //0128: EB              EX      DE,HL                ; Sprite 
 adc gamevars8080.alienFrame                //0129: 78              LD      A,B                  ; Animation frame number"
 tax                //012A: A7              AND     A                    ; Is it position 0?
 //x is frame image for alien                //012B: C4 3B 01        CALL    NZ,$013B            ; No ... add 30 and use position 1 alien sprites"
-lda gamevars8080.alienPosLSB                //012E: 2A 0B 20        LD      HL,(alienPosLSB)    ; Pixel position"
-sta HL
-lda gamevars8080.alienPosMSB
-sta HL+1
+
+//deleted this. dont think i need poslsb/msb?
+//lda gamevars8080.alienPosLSB     //X           //012E: 2A 0B 20        LD      HL,(alienPosLSB)    ; Pixel position"
+//sta HL
+//lda gamevars8080.alienPosMSB    //Y
+//sta HL+1
+
 //loadBC($1000)                //0131: 06 10           LD      B,$10                ; 16 rows in alien sprites"
 jsr DrawSprite                //0133: CD D3 15        CALL    DrawSprite          ; Draw shifted sprite
-DrawAlienExit:                //;
+lda HL+1
+sta gamevars8080.alienPosLSB
+lda HL
+sta gamevars8080.alienPosMSB
+
+DrawAlienExit:
+               //;
+ldx gamevars8080.alienCurIndex
+lda gamevars8080.alienPosLSB    //X
+sta gamevars8080.EdgeCheckX,x
+lda gamevars8080.alienPosMSB    //Y
+sta gamevars8080.EdgeCheckY,x
+//save x and y in array for checks later
                 //0136: AF              XOR     A                    ; Let the ISR routine ...
 stz gamevars8080.waitOnDraw               //0137: 32 00 20        LD      (waitOnDraw),A      ; ... advance the cursor to the next alien"
 rts                //013A: C9              RET                          ; Out
@@ -256,8 +272,9 @@ lda HL+1                //0167: 22 0B 20        LD      (alienPosLSB),HL    ; St
 sta gamevars8080.alienPosMSB
 lda HL
 sta gamevars8080.alienPosLSB
+//break()
                 //016A: 7D              LD      A,L                  ; Has this alien ..."
-cmp #$28                //016B: FE 28           CP      $28                  ; ... reached the end of screen?
+cmp #$c8                //016B: FE 28           CP      $28                  ; ... reached the end of screen? checkbottom
 bcc !+                //016D: DA 71 19        JP      C,$1971             ; Yes ... kill the player"
 jmp AlienAtBottom
 !:
@@ -325,7 +342,7 @@ loadHL(gamevars8080.alienCurIndex)                //01A5: 21 06 20        LD    
 stz gamevars8080.alienCurIndex                //01A8: 36 00           LD      (HL),$00            ; ... index to 0"
 inc HL                //01AA: 23              INC     HL                   ; Point to DeltaX
 lda gamevars8080.refAlienDYr                //01AB: 4E              LD      C,(HL)              ; Load DX into C"
-//stz gamevars8080.refAlienDYr                //01AC: 36 00           LD      (HL),$00            ; Set DX to 0"
+stz gamevars8080.refAlienDYr                //01AC: 36 00           LD      (HL),$00            ; Set DX to 0"
 jsr AddDelta               //01AE: CD D9 01        CALL    AddDelta            ; Move alien
                 //01B1: 21 05 20        LD      HL,$2005            ; Alien animation frame number"
 lda gamevars8080.alienFrame                //01B4: 7E              LD      A,(HL)              ; Toggle ..."
@@ -343,6 +360,7 @@ InitAliens:                //InitAliens:
                 //; Initialize the 55 aliens from last to 1st. 1 means alive.
                 //;
 lda #$01                //01C0: 21 00 21        LD      HL,$2100            ; Start of alien structures (this is the last alien)"
+//sta gamevars8080.numAliens      // todo remove this and fix alien count
 ldx #$36                //01C3: 06 37           LD      B,$37                ; Count to 55 (that's five rows of 11 aliens)"
 InitAliens1:
 sta gamevars8080.P1Data,x                //01C5: 36 01           LD      (HL),$01            ; Bring alien to live"
@@ -3232,45 +3250,88 @@ break()                //1538: 21 03 20        LD      HL,$2003            ; Dec
                 //1596: C9              RET                          ; Out
                 //
 RackBump:                //RackBump:
-                //; When rack bumps the edge of the screen then the direction flips and the rack
+               //; When rack bumps the edge of the screen then the direction flips and the rack
                 //; drops 8 pixels. The deltaX and deltaY values are changed here. Interestingly
                 //; if there is only one alien left then the right value is 3 instead of the
                 //; usual 2. The left direction is always -2.
-// TODO                //1597: 3A 0D 20        LD      A,(rackDirection)   ; Get rack direction"
+    lda gamevars8080.rackDirection                //1597: 3A 0D 20        LD      A,(rackDirection)   ; Get rack direction"
                 //159A: A7              AND     A                    ; Moving right?
-                //159B: C2 B7 15        JP      NZ,$15B7            ; No ... handle moving left"
-                //;
-                //159E: 21 A4 3E        LD      HL,$3EA4            ; Line down the right edge of playfield"
-                //15A1: CD C5 15        CALL    $15C5                ; Check line down the edge
-                //15A4: D0              RET     NC                   ; Nothing is there ... return
-                //15A5: 06 FE           LD      B,$FE                ; Delta X of -2"
-                //15A7: 3E 01           LD      A,$01                ; Rack now moving right"
-                //;
-                //15A9: 32 0D 20        LD      (rackDirection),A   ; Set new rack direction"
+    bne RackMovingLeft                //159B: C2 B7 15        JP      NZ,$15B7            ; No ... handle moving left"
+    ldx #$00        //                //159E: 21 A4 3E        LD      HL,$3EA4            ; Line down the right edge of playfield"
+NextMovingRight:                //;
+    lda gamevars8080.EdgeCheckX,x                //15A1: CD C5 15        CALL    $15C5                ; Check line down the edge
+    beq NextMovingRight2        // zero means no alien               //15A4: D0              RET     NC                   ; Nothing is there ... return
+    txa                 
+    jsr convtoRow       // conv alien num (0-54) in a to row number in y for Xpos limit 
+    tya
+    and #$fe        // now 0/2/4 in a for alien type
+    clc
+    adc #$c8        // add 200 , this is now X limit
+    sta RBxLimit
+    lda gamevars8080.EdgeCheckX,x              
+    cmp RBxLimit: #$00
+    bcs changeDir
+NextMovingRight2:
+    inx
+    cpx #$37
+    bne NextMovingRight
+    rts            
+    
+    changeDir:
+    ldy #$fe            //15A5: 06 FE           LD      B,$FE                ; Delta X of -2"
+           //15A7: 3E 01           LD      A,$01                ; Rack now moving right"
+    lda #$01            //;
+    changeDir2:
+    sta gamevars8080.rackDirection            //15A9: 32 0D 20        LD      (rackDirection),A   ; Set new rack direction"
                 //15AC: 78              LD      A,B                  ; B has delta X"
-                //15AD: 32 08 20        LD      (refAlienDXr),A     ; Set new delta X"
-                //15B0: 3A 0E 20        LD      A,(rackDownDelta)   ; Set delta Y ..."
-                //15B3: 32 07 20        LD      (refAlienDYr),A     ; ... to drop rack by 8"
+    sty gamevars8080.refAlienDXr            //15AD: 32 08 20        LD      (refAlienDXr),A     ; Set new delta X"
+    lda gamevars8080.rackDownDelta            //15B0: 3A 0E 20        LD      A,(rackDownDelta)   ; Set delta Y ..."
+    sta gamevars8080.refAlienDYr            //15B3: 32 07 20        LD      (refAlienDYr),A     ; ... to drop rack by 8"
 rts                //15B6: C9              RET                          ; Done
                 //;
-                //15B7: 21 24 25        LD      HL,$2524            ; Line down the left edge of playfield"
-                //15BA: CD C5 15        CALL    $15C5                ; Check line down the edge
-                //15BD: D0              RET     NC                   ; Nothing is there ... return
-                //15BE: CD F1 18        CALL    $18F1                ; Get moving-right delta X value of 2 (3 if just one alien left)
-                //15C1: AF              XOR     A                    ; Rack now moving left
-                //15C2: C3 A9 15        JP      $15A9                ; Set rack direction
-                //;
-                //15C5: 06 17           LD      B,$17                ; Checking 23 bytes in a line up the screen from near the bottom"
-                //15C7: 7E              LD      A,(HL)              ; Get screen memory"
-                //15C8: A7              AND     A                    ; Is screen memory empty?
-                //15C9: C2 6B 16        JP      NZ,$166B            ; No ... set carry flag and out"
-                //15CC: 23              INC     HL                   ; Next byte on screen
-                //15CD: 05              DEC     B                    ; All column done?
-                //15CE: C2 C7 15        JP      NZ,$15C7            ; No ... keep looking"
-                //15D1: C9              RET                          ; Return with carry flag clear
-                //
-                //15D2: 00              NOP                          ; ** Why? Something optimized?
+
+RackMovingLeft:
+    ldx #$00                        //15B7: 21 24 25        LD      HL,$2524            ; Line down the left edge of playfield"
+NextMovingLeft:                //;
+    lda gamevars8080.EdgeCheckX,x                //15A1: CD C5 15        CALL    $15C5                ; Check line down the edge
+    beq NextMovingLeft2        // zero means no alien               //15A4: D0              RET     NC                   ; Nothing is there ... return
+    txa                 
+    jsr convtoRow       // conv alien num (0-54) in a to row number in y for Xpos limit 
+    tya
+    lsr         // divide 2 = 0,0,1,1,2
+    eor #$ff    //  now -1,-1,-2,-2,-3
+    clc
+    adc #$9        // add 8 gives 8,8,7,7,6 as X limit
+    sta RBxLimitLeft
+    lda gamevars8080.EdgeCheckX,x              
+    cmp RBxLimitLeft: #$00
+    bcc changeDirL
+NextMovingLeft2:
+    inx
+    cpx #$37
+    bne NextMovingLeft
+    rts            
+    
+    changeDirL:
+    ldy #$02            //18F1: 06 02           LD      B,$02                ; Rack moving right delta X"
+    lda gamevars8080.numAliens            //18F3: 3A 82 20        LD      A,(numAliens)       ; Number of aliens on screen"
+    dec            //18F6: 3D              DEC     A                    ; Just one left?
+    bne ChangeDirL1            //18F7: C0              RET     NZ                   ; No ... use right delta X of 2
+    iny            //18F8: 04              INC     B                    ; Just one alien ... move right at 3 instead of 2
+    ChangeDirL1:
+    lda #$00            //15C1: AF              XOR     A                    ; Rack now moving left
+    bra changeDir2            //15C2: C3 A9 15        JP      $15A9                ; Set rack direction
+
                 //    
+convtoRow:      //a = alien num, return y = row
+ldy #$ff
+convToRow1:
+iny
+sec
+sbc #$0B //11
+bcs convToRow1
+rts
+
 DrawSprite:                //DrawSprite:
                 // gamevars8080.alienCurIndex is sprite number
 //break()                // x is offset to image
@@ -3339,25 +3400,28 @@ sta VERADATA0
                 //15F1: E1              POP     HL                   ; Restore HL
 rts                //15F2: C9              RET                          ; Done
                 //
-                //CountAliens:
+CountAliens:                //CountAliens:
                 //; Count number of aliens remaining in active game and return count 2082 holds the current count.
                 //; If only 1, 206B gets a flag of 1 ** but ever nobody checks this"
-                //15F3: CD 11 16        CALL    GetPlayerDataPtr    ; Get active player descriptor
-                //15F6: 01 00 37        LD      BC,$3700            ; B=55 aliens to check?"
-                //15F9: 7E              LD      A,(HL)              ; Get byte"
+jsr GetPlayerDataPtr                //15F3: CD 11 16        CALL    GetPlayerDataPtr    ; Get active player descriptor
+ldy #0              //y = alien living counter              //15F6: 01 00 37        LD      BC,$3700            ; B=55 aliens to check?"
+ldx #$37            // x = alien counter
+CountLoop:
+lda (HL)                //15F9: 7E              LD      A,(HL)              ; Get byte"
                 //15FA: A7              AND     A                    ; Is it a zero?
-                //15FB: CA FF 15        JP      Z,$15FF             ; Yes ... don't count it"
-                //15FE: 0C              INC     C                    ; Count the live aliens
-                //15FF: 23              INC     HL                   ; Next alien
-                //1600: 05              DEC     B                    ; Count ...
-                //1601: C2 F9 15        JP      NZ,$15F9            ; ... all alien indicators"
+beq CountAliens1                //15FB: CA FF 15        JP      Z,$15FF             ; Yes ... don't count it"
+iny                //15FE: 0C              INC     C                    ; Count the live aliens
+CountAliens1:
+inc HL                //15FF: 23              INC     HL                   ; Next alien
+dex                //1600: 05              DEC     B                    ; Count ...
+bne CountLoop                //1601: C2 F9 15        JP      NZ,$15F9            ; ... all alien indicators"
                 //1604: 79              LD      A,C                  ; Get the count"
-                //1605: 32 82 20        LD      (numAliens),A       ; Hold it"
+sty gamevars8080.numAliens                //1605: 32 82 20        LD      (numAliens),A       ; Hold it"
                 //1608: FE 01           CP      $01                  ; Just one?
                 //160A: C0              RET     NZ                   ; No keep going
-                //160B: 21 6B 20        LD      HL,$206B            ; Set flag if ..."
+                //160B: 21 6B 20        LD      HL,$206B            ; Set flag if ..."  << this is never checked so pass
                 //160E: 36 01           LD      (HL),$01            ; ... only one alien left"
-                //1610: C9              RET                          ; Out
+rts                //1610: C9              RET                          ; Out
                 //
 GetPlayerDataPtr:                //GetPlayerDataPtr:
                 //; Set HL with 2100 if player 1 is active or 2200 if player 2 is active
@@ -4300,7 +4364,7 @@ asl
 asl
 asl //*16
 //clc  should be clear anyway!
-adc gamevars8080.refAlienYr
+adc gamevars8080.refAlienXr
 sta HL+1
 tya
 asl
@@ -4308,7 +4372,7 @@ asl
 asl
 asl
 sta PTR1
-lda gamevars8080.refAlienXr
+lda gamevars8080.refAlienYr
 sec
 sbc PTR1
 sta HL
@@ -4422,7 +4486,7 @@ MessageScore:                //MessageScore:
                 //; Coppied to RAM (2000) C0 bytes as initialization.
                 //; See the description of RAM at the top of this file for the details on this data.
 InitializationDATA:                //
-.byte  $01, $00, $00, $10, $00, $00, $00, $02, $00, $18, $78, $18, $78, $00, $08, $00               //1B00: 01 00 00 10 00 00 00 00 02 78 38 78 38 00 F8 00
+.byte  $01, $00, $00, $10, $00, $00, $00, $00, $02, $78, $18, $78, $18, $00, $08, $00               //1B00: 01 00 00 10 00 00 00 00 02 78 38 78 38 00 F8 00
 .byte  $00, $80, $00, <GameObj0, >GameObj0, $FF, $05, $0C, $60, $1C, $20, $30, $10, $01, $00, $00    //gameobj0 data          //1B10: 00 80 00 8E 02 FF 05 0C 60 1C 20 30 10 01 00 00   
 .byte  $00, $00, $00, <GameObj1, >GameObj1, $00, $10, $90, $1C, $28, $30, $01, $04, $00, $FF, $FF    //gameobj1 data          //1B20: 00 00 00 BB 03 00 10 90 1C 28 30 01 04 00 FF FF   
 .byte  $00, $00, $02, <GameObj2, >GameObj2, $00, $00, $00, $00, $00, $04, $EE, $1C, $00, $00, $03    //gameobj2 data           //1B30: 00 00 02 76 04 00 00 00 00 00 04 EE 1C 00 00 03    
