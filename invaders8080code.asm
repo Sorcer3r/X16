@@ -5097,12 +5097,12 @@ SplashAni4Struct:                //;
 .byte $00, $00, $01, $D0, $22, $20, $1C, $10, $94, $00, $20, $1C                //1FD5: 00 00 01 D0 22 20 1C 10 94 00 20 1C 
                 //
 Message2Coins:                //Message2Coins:
-                //1FE1: 28 1C 26 0F 0B 00 18 04    ; ""*2 PLAYERS 2 COINS"""
-                //1FE9: 11 12 26 1C 26 02 0E 08 
-                //1FF1: 0D 12                                
+.byte $28, $1C, $26, $0F, $0B, $00, $18, $04            //1FE1: 28 1C 26 0F 0B 00 18 04    ; ""*2 PLAYERS 2 COINS"""
+.byte $11, $12, $26, $1C, $26, $02, $0E, $08            //1FE9: 11 12 26 1C 26 02 0E 08 
+.byte $0D 12             //1FF1: 0D 12                                
                 //
 MessagePush:                //MessagePush:
-                //1FF3: 0F 14 12 07 26             ; ""PUSH " (with space on the end)"
+.byte $0F, $14, $12, $07, $26                //1FF3: 0F 14 12 07 26             ; ""PUSH " (with space on the end)"
                 //
                 //1FF8: 00 08 08 08 08 08 00 00                ; 3F:""-"""
 shipsPerCred: 
