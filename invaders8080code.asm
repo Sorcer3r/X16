@@ -534,63 +534,94 @@ RunGameObjs:                //RunGameObjs:
                 //;
 loadHL(gamevars8080.obj0TimerMSB)                //0248: 21 10 20        LD      HL,$2010            ; First game object (active player)"
 RunGameObjs1:
-//break()                //024B: 7E              LD      A,(HL)              ; Have we reached the ..."
+lda (HL)               //024B: 7E              LD      A,(HL)              ; Have we reached the ..."
 cmp #$ff                //024C: FE FF           CP      $FF                  ; ... end of the object list?
-rts                //024E: C8              RET     Z                    ; Yes ... done
-                //024F: FE FE           CP      $FE                  ; Is object active?
-                //0251: CA 81 02        JP      Z,$0281             ; No ... skip it"
-                //0254: 23              INC     HL                   ; xx01
-                //0255: 46              LD      B,(HL)              ; First byte to B"
-                //0256: 4F              LD      C,A                  ; Hold 1st byte"
-                //0257: B0              OR      B                    ; OR 1st and 2nd byte
+bne !+               //024E: C8              RET     Z                    ; Yes ... done
+rts
+!:
+cmp #$fe                //024F: FE FE           CP      $FE                  ; Is object active?
+beq RunGameObjNext                //0251: CA 81 02        JP      Z,$0281             ; No ... skip it"
+tay                     // save a in y (C)
+inc HL                //0254: 23              INC     HL                   ; xx01
+lda (HL)                //0255: 46              LD      B,(HL)              ; First byte to B"
+sta BC+1
+tax                     // store in x (B)
+tya                     // get a back (C)
+sta BC                //0256: 4F              LD      C,A                  ; Hold 1st byte"
+ora (HL+1)                //0257: B0              OR      B                    ; OR 1st and 2nd byte
                 //0258: 79              LD      A,C                  ; Restore 1st byte"
-                //0259: C2 77 02        JP      NZ,$0277            ; If word at xx00,xx02 is non zero then decrement it"
+bne RunGameObjDec                //0259: C2 77 02        JP      NZ,$0277            ; If word at xx00,xx02 is non zero then decrement it"
                 //;
-                //025C: 23              INC     HL                   ; xx02
-                //025D: 7E              LD      A,(HL)              ; Get byte counter"
+inc HL                //025C: 23              INC     HL                   ; xx02
+lda (HL)                //025D: 7E              LD      A,(HL)              ; Get byte counter"
                 //025E: A7              AND     A                    ; Is it 0?
-                //025F: C2 88 02        JP      NZ,$0288            ; No ... decrement byte counter at xx02"
-                //0262: 23              INC     HL                   ; xx03
-                //0263: 5E              LD      E,(HL)              ; Get handler address LSB"
-                //0264: 23              INC     HL                   ; xx04
-                //0265: 56              LD      D,(HL)              ; Get handler address MSB"
-                //0266: E5              PUSH    HL                   ; Remember pointer to MSB
+bne runGameObjDecExtra                //025F: C2 88 02        JP      NZ,$0288            ; No ... decrement byte counter at xx02"
+inc HL                //0262: 23              INC     HL                   ; xx03
+lda (HL)              //0263: 5E              LD      E,(HL)              ; Get handler address LSB"
+sta objHandlerAddress                    //save LSB of handler
+inc HL                //0264: 23              INC     HL                   ; xx04
+lda (HL)                //0265: 56              LD      D,(HL)              ; Get handler address MSB"
+                     // save MSB of handler
+lda HL+1                //0266: E5              PUSH    HL                   ; Remember pointer to MSB
+tax
+phx
+lda HL
+tay
+phy
                 //0267: EB              EX      DE,HL                ; Handler address to HL"
                 //0268: E5              PUSH    HL                   ; Now to stack (making room for indirect call)
-                //0269: 21 6F 02        LD      HL,$026F            ; Return address to 026F"
+lda #<gameObjReturnHere                //0269: 21 6F 02        LD      HL,$026F            ; Return address to 026F"
+pha
+lda #>gameObjReturnHere
+pha
                 //026C: E3              EX      (SP),HL             ; Return address (026F) now on stack. Handler in HL."
-                //026D: D5              PUSH    DE                   ; Push pointer to data struct (xx04) for handler to use
-                //026E: E9              JP      (HL)                 ; Run object's code (will return to next line)
-                //026F: E1              POP     HL                   ; Restore pointer to xx04
-                //0270: 11 0C 00        LD      DE,$000C            ; Offset to next ..."
-                //0273: 19              ADD     HL,DE                ; ... game task (C+4=10)"
-                //0274: C3 4B 02        JP      $024B                ; Do next game task
+phx                //026D: D5              PUSH    DE                   ; Push pointer to data struct (xx04) for handler to use
+phy
+jmp objHandlerAddress: #$deaf                //026E: E9              JP      (HL)                 ; Run object's code (will return to next line)
+gameObjReturnHere:
+pla                //026F: E1              POP     HL                   ; Restore pointer to xx04
+sta HL
+pla
+sta HL+1
+lda #$0c                //0270: 11 0C 00        LD      DE,$000C            ; Offset to next ..."
+clc
+adc HL+1                //0273: 19              ADD     HL,DE                ; ... game task (C+4=10)"
+sta HL+1
+bra RunGameObjs1                //0274: C3 4B 02        JP      $024B                ; Do next game task
                 //;
                 //; Word at xx00 and xx01 is non-zero. Decrement it and move to next task.
-                //0277: 05              DEC     B                    ; Decrement ...
-                //0278: 04              INC     B                    ; ... two ...
-                //0279: C2 7D 02        JP      NZ,$027D            ; ... byte ..."
-                //027C: 3D              DEC     A                    ; ... value ...
-                //027D: 05              DEC     B                    ; ... at ...
-                //027E: 70              LD      (HL),B              ; ... xx00 ..."
-                //027F: 2B              DEC     HL                   ; ... and ...
-                //0280: 77              LD      (HL),A              ; ... xx01"
+RunGameObjDec:
+dex                //0277: 05              DEC     B                    ; Decrement ...
+inx                //0278: 04              INC     B                    ; ... two ...
+bne decLow                //0279: C2 7D 02        JP      NZ,$027D            ; ... byte ..."
+dey                //027C: 3D              DEC     A                    ; ... value ...
+decLow:
+dex                //027D: 05              DEC     B                    ; ... at ...
+txa
+sta (HL+1)                //027E: 70              LD      (HL),B              ; ... xx00 ..."
+tya                //027F: 2B              DEC     HL                   ; ... and ...
+sta (HL)                //0280: 77              LD      (HL),A              ; ... xx01"
                 //;
-                //0281: 11 10 00        LD      DE,$0010            ; Next ..."
-                //0284: 19              ADD     HL,DE                ; ... object descriptor"
-                //0285: C3 4B 02        JP      $024B                ; Keep processing game objects
+RunGameObjNext:
+lda  HL+1              //0281: 11 10 00        LD      DE,$0010            ; Next ..."
+clc                //0284: 19              ADD     HL,DE                ; ... object descriptor"
+adc #$10
+sta HL+1
+bra RunGameObjs1                //0285: C3 4B 02        JP      $024B                ; Keep processing game objects
                 //;
                 //; Word at xx00 and xx01 is zero and byte at xx02 is non-zero. Decrement xx02 and
                 //; move to next task.
-                //0288: 35              DEC     (HL)                 ; Decrement the xx02 counter
-                //0289: 2B              DEC     HL                   ; Back up to ...
-                //028A: 2B              DEC     HL                   ; ... start of game task
-                //028B: C3 81 02        JP      $0281                ; Next game task
+runGameObjDecExtra:
+dec                 //0288: 35              DEC     (HL)                 ; Decrement the xx02 counter
+sta (HL)
+dec HL                //0289: 2B              DEC     HL                   ; Back up to ...
+dec HL                //028A: 2B              DEC     HL                   ; ... start of game task
+bra RunGameObjNext                //028B: C3 81 02        JP      $0281                ; Next game task
                 //
                 //
                 //
 GameObj0:                //GameObj0:
-//break()                //; Game object 0: Move/draw the player
+break()                //; Game object 0: Move/draw the player
 lda #0                //;
                 //; This task is only called at the mid-screen ISR. It ALWAYS does its work here, even though"
                 //; the player can be on the top or bottom of the screen (not rotated).
@@ -768,8 +799,8 @@ lda #0                //;
                 //
                 //
 GameObj1:                //GameObj1:
-                //; Game object 1: Move/draw the player shot
-                //;
+break()                //; Game object 1: Move/draw the player shot
+lda #$01                //;
                 //; This task executes at either mid-screen ISR (if it is on the top half of the non-rotated screen) or
                 //; at the end-screen ISR (if it is on the bottom half of the screen).
                 //;
@@ -896,8 +927,8 @@ GameObj1:                //GameObj1:
                 //
                 //
 GameObj2:                //GameObj2:
-                //; Game object 2: Alien rolling-shot (targets player specifically)
-                //;
+break()                //; Game object 2: Alien rolling-shot (targets player specifically)
+lda #$02                //;
                 //; The 2-byte value at 2038 is where the firing-column-table-pointer would be (see other
                 //; shots ... next game objects). This shot doesn't use that table. It targets the player
                 //; specifically. Instead the value is used as a flag to have the shot skip its first
@@ -944,8 +975,8 @@ GameObj2:                //GameObj2:
                 //
                 //
 GameObj3:                //GameObj3:
-                //; Game object 3: Alien plunger-shot
-                //; This is skipped if there is only one alien left on the screen.
+break()                //; Game object 3: Alien plunger-shot
+lda #$03                //; This is skipped if there is only one alien left on the screen.
                 //;
                 //04B6: E1              POP     HL                   ; Game object data
                 //04B7: 3A 6E 20        LD      A,(skipPlunger)     ; One alien left? Skip plunger shot?"
@@ -1210,8 +1241,8 @@ squigglyShot:                //; GameObject 4 comes here if processing a squiggl
                 //       
                 //
 GameObj4:                //GameObj4:
-                //; Game object 4: Flying Saucer OR squiggly shot
-                //;
+break()                //; Game object 4: Flying Saucer OR squiggly shot
+lda #$04                //;
                 //; This task is shared by the squiggly-shot and the flying saucer. The saucer waits until the
                 //; squiggly-shot is over before it begins.
                 //;
@@ -1341,7 +1372,7 @@ lda #4                //0694: A7              AND     A                    ; ...
                 //
 waitForStart:                //WaitForStart:
 break()                //; Wait for player 1 start button press
-lda #$01                //0765: 3E 01           LD      A,$01                ; Tell ISR that we ..."
+lda #$fe                //0765: 3E 01           LD      A,$01                ; Tell ISR that we ..."
                 //0767: 32 93 20        LD      (waitStartLoop),A   ; ... have started to wait"
                 //076A: 31 00 24        LD      SP,$2400            ; Reset stack"
                 //076D: FB              EI                           ; Enable interrupts
@@ -1885,10 +1916,11 @@ bne PrintMessageDel                //0AA7: C2 93 0A        JP      NZ,PrintMessa
 rts                //0AAA: C9              RET                          ; Out
                 //
 SplashSquiggly:                //SplashSquiggly:
-lda #<gamevars8080.obj4TimerMSB                //0AAB: 21 50 20        LD      HL,$2050            ; Pointer to game-object 4 timer"
-sta HL
-lda #>gamevars8080.obj4TimerMSB
-sta HL+1
+//lda #<gamevars8080.obj4TimerMSB                //0AAB: 21 50 20        LD      HL,$2050            ; Pointer to game-object 4 timer"
+//sta HL
+//lda #>gamevars8080.obj4TimerMSB
+//sta HL+1
+loadHL(gamevars8080.obj4TimerMSB)
 jmp RunGameObjs1                //0AAE: C3 4B 02        JP      $024B                ; Process squiggly-shot in demo mode
                 //
                 //OneSecDelay:
@@ -5099,7 +5131,7 @@ SplashAni4Struct:                //;
 Message2Coins:                //Message2Coins:
 .byte $28, $1C, $26, $0F, $0B, $00, $18, $04            //1FE1: 28 1C 26 0F 0B 00 18 04    ; ""*2 PLAYERS 2 COINS"""
 .byte $11, $12, $26, $1C, $26, $02, $0E, $08            //1FE9: 11 12 26 1C 26 02 0E 08 
-.byte $0D 12             //1FF1: 0D 12                                
+.byte $0D, $12             //1FF1: 0D 12                                
                 //
 MessagePush:                //MessagePush:
 .byte $0F, $14, $12, $07, $26                //1FF3: 0F 14 12 07 26             ; ""PUSH " (with space on the end)"
