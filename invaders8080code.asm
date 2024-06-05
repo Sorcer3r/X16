@@ -548,7 +548,7 @@ sta BC+1
 tax                     // store in x (B)
 tya                     // get a back (C)
 sta BC                //0256: 4F              LD      C,A                  ; Hold 1st byte"
-ora (HL+1)                //0257: B0              OR      B                    ; OR 1st and 2nd byte
+ora BC+1                //0257: B0              OR      B                    ; OR 1st and 2nd byte
                 //0258: 79              LD      A,C                  ; Restore 1st byte"
 bne RunGameObjDec                //0259: C2 77 02        JP      NZ,$0277            ; If word at xx00,xx02 is non zero then decrement it"
                 //;
@@ -561,23 +561,23 @@ lda (HL)              //0263: 5E              LD      E,(HL)              ; Get 
 sta objHandlerAddress                    //save LSB of handler
 inc HL                //0264: 23              INC     HL                   ; xx04
 lda (HL)                //0265: 56              LD      D,(HL)              ; Get handler address MSB"
-                     // save MSB of handler
+sta objHandlerAddress+1                     // save MSB of handler
 lda HL+1                //0266: E5              PUSH    HL                   ; Remember pointer to MSB
 tax
-phx
 lda HL
 tay
+phx
 phy
                 //0267: EB              EX      DE,HL                ; Handler address to HL"
                 //0268: E5              PUSH    HL                   ; Now to stack (making room for indirect call)
-lda #<gameObjReturnHere                //0269: 21 6F 02        LD      HL,$026F            ; Return address to 026F"
+lda #>gameObjReturnHere-1                //0269: 21 6F 02        LD      HL,$026F            ; Return address to 026F"
 pha
-lda #>gameObjReturnHere
+lda #<gameObjReturnHere-1                // because stupid 6502 doesnt return to the address on the stack but the address+1!
 pha
                 //026C: E3              EX      (SP),HL             ; Return address (026F) now on stack. Handler in HL."
 phx                //026D: D5              PUSH    DE                   ; Push pointer to data struct (xx04) for handler to use
 phy
-jmp objHandlerAddress: #$deaf                //026E: E9              JP      (HL)                 ; Run object's code (will return to next line)
+jmp objHandlerAddress: $deaf                //026E: E9              JP      (HL)                 ; Run object's code (will return to next line)
 gameObjReturnHere:
 pla                //026F: E1              POP     HL                   ; Restore pointer to xx04
 sta HL
@@ -585,8 +585,8 @@ pla
 sta HL+1
 lda #$0c                //0270: 11 0C 00        LD      DE,$000C            ; Offset to next ..."
 clc
-adc HL+1                //0273: 19              ADD     HL,DE                ; ... game task (C+4=10)"
-sta HL+1
+adc HL                //0273: 19              ADD     HL,DE                ; ... game task (C+4=10)"
+sta HL
 bra RunGameObjs1                //0274: C3 4B 02        JP      $024B                ; Do next game task
                 //;
                 //; Word at xx00 and xx01 is non-zero. Decrement it and move to next task.
@@ -598,15 +598,16 @@ dey                //027C: 3D              DEC     A                    ; ... va
 decLow:
 dex                //027D: 05              DEC     B                    ; ... at ...
 txa
-sta (HL+1)                //027E: 70              LD      (HL),B              ; ... xx00 ..."
+sta (HL)                //027E: 70              LD      (HL),B              ; ... xx00 ..."
 tya                //027F: 2B              DEC     HL                   ; ... and ...
+dec HL
 sta (HL)                //0280: 77              LD      (HL),A              ; ... xx01"
                 //;
 RunGameObjNext:
-lda  HL+1              //0281: 11 10 00        LD      DE,$0010            ; Next ..."
+lda  HL              //0281: 11 10 00        LD      DE,$0010            ; Next ..."
 clc                //0284: 19              ADD     HL,DE                ; ... object descriptor"
 adc #$10
-sta HL+1
+sta HL
 bra RunGameObjs1                //0285: C3 4B 02        JP      $024B                ; Keep processing game objects
                 //;
                 //; Word at xx00 and xx01 is zero and byte at xx02 is non-zero. Decrement xx02 and
@@ -799,9 +800,11 @@ lda #0                //;
                 //
                 //
 GameObj1:                //GameObj1:
-break()                //; Game object 1: Move/draw the player shot
+//break()                //; Game object 1: Move/draw the player shot
 lda #$01                //;
-                //; This task executes at either mid-screen ISR (if it is on the top half of the non-rotated screen) or
+pla
+pla
+rts                //; This task executes at either mid-screen ISR (if it is on the top half of the non-rotated screen) or
                 //; at the end-screen ISR (if it is on the bottom half of the screen).
                 //;
                 //03BB: 11 2A 20        LD      DE,$202A            ; Object's Yn coordiante"
@@ -927,9 +930,11 @@ lda #$01                //;
                 //
                 //
 GameObj2:                //GameObj2:
-break()                //; Game object 2: Alien rolling-shot (targets player specifically)
+//break()                //; Game object 2: Alien rolling-shot (targets player specifically)
 lda #$02                //;
-                //; The 2-byte value at 2038 is where the firing-column-table-pointer would be (see other
+pla
+pla
+rts                //; The 2-byte value at 2038 is where the firing-column-table-pointer would be (see other
                 //; shots ... next game objects). This shot doesn't use that table. It targets the player
                 //; specifically. Instead the value is used as a flag to have the shot skip its first
                 //; attempt at firing every time it is reinitialized (when it blows up).
@@ -943,18 +948,25 @@ lda #$02                //;
                 //; When the timer is 0 this object, the rolling-shot, runs."
                 //;
                 //0476: E1              POP     HL                   ; Game object data
-                //0477: 3A 32 1B        LD      A,($1B32)           ; Restore delay from ..."
-                //047A: 32 32 20        LD      (obj2TimerExtra),A  ; ... ROM mirror (value 2)"
-                //047D: 2A 38 20        LD      HL,(rolShotCFirLSB) ; Get pointer to ..."
-                //0480: 7D              LD      A,L                  ; ... column-firing table."
+lda InitializationDATA+$32                //0477: 3A 32 1B        LD      A,($1B32)           ; Restore delay from ..."
+sta gamevars8080.obj2TimerExtra                //047A: 32 32 20        LD      (obj2TimerExtra),A  ; ... ROM mirror (value 2)"
+lda gamevars8080.rolShotCFirLSB                //047D: 2A 38 20        LD      HL,(rolShotCFirLSB) ; Get pointer to ..."
+sta HL
+lda gamevars8080.rolShotCFirMSB
+sta HL+1
+ora HL                //0480: 7D              LD      A,L                  ; ... column-firing table."
                 //0481: B4              OR      H                    ; All zeros?
-                //0482: C2 8A 04        JP      NZ,$048A            ; No ... must be a valid column. Go fire."
-                //0485: 2B              DEC     HL                   ; Decrement the counter
-                //0486: 22 38 20        LD      (rolShotCFirLSB),HL ; Store new counter value (run the shot next time)"
-                //0489: C9              RET                          ; And out
+bne GameObj2Fire                //0482: C2 8A 04        JP      NZ,$048A            ; No ... must be a valid column. Go fire."
+dec HL                //0485: 2B              DEC     HL                   ; Decrement the counter
+lda HL                //0486: 22 38 20        LD      (rolShotCFirLSB),HL ; Store new counter value (run the shot next time)"
+sta gamevars8080.rolShotCFirLSB
+lda HL+1
+sta gamevars8080.rolShotCFirMSB
+rts                //0489: C9              RET                          ; And out
                 //
-                //048A: 11 35 20        LD      DE,$2035            ; Rolling-shot data structure"
-                //048D: 3E F9           LD      A,$F9                ; Last picture of ""rolling" alien shot"
+GameObj2Fire:
+break()                //048A: 11 35 20        LD      DE,$2035            ; Rolling-shot data structure"
+lda #$f9                //048D: 3E F9           LD      A,$F9                ; Last picture of ""rolling" alien shot"
                 //048F: CD 50 05        CALL    ToShotStruct        ; Set code to handle rolling-shot
                 //0492: 3A 46 20        LD      A,(pluShotStepCnt)  ; Get the plunger-shot step count"
                 //0495: 32 70 20        LD      (otherShot1),A      ; Hold it"
@@ -975,9 +987,11 @@ lda #$02                //;
                 //
                 //
 GameObj3:                //GameObj3:
-break()                //; Game object 3: Alien plunger-shot
+//break()                //; Game object 3: Alien plunger-shot
 lda #$03                //; This is skipped if there is only one alien left on the screen.
-                //;
+pla
+pla
+rts                //;
                 //04B6: E1              POP     HL                   ; Game object data
                 //04B7: 3A 6E 20        LD      A,(skipPlunger)     ; One alien left? Skip plunger shot?"
                 //04BA: A7              AND     A                    ; Check
@@ -1241,9 +1255,11 @@ squigglyShot:                //; GameObject 4 comes here if processing a squiggl
                 //       
                 //
 GameObj4:                //GameObj4:
-break()                //; Game object 4: Flying Saucer OR squiggly shot
+//break()                //; Game object 4: Flying Saucer OR squiggly shot
 lda #$04                //;
-                //; This task is shared by the squiggly-shot and the flying saucer. The saucer waits until the
+pla
+pla
+rts                //; This task is shared by the squiggly-shot and the flying saucer. The saucer waits until the
                 //; squiggly-shot is over before it begins.
                 //;
                 //0682: E1              POP     HL                   ; Pull data pointer from the stack (not going to use it)
