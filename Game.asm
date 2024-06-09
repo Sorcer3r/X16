@@ -10,6 +10,8 @@
 *=$0801
 	BasicUpstart2(main)
 main: {
+	tsx
+	stx $100
 	backupVeraAddrInfo()
 
     jsr spriteEngine.copyGFXtoVera
