@@ -1108,11 +1108,12 @@ rts                //;
                 //050B: C3 7E 06        JP      $067E                ; ... column-firing pointer data
                 //
                 //; Game task 4 when splash screen alien is shooting extra ""C" with a squiggly shot"
+gameTask4Alienshoot:
                 //050E: E1              POP     HL                   ; Ignore the task data pointer passed on stack
                 //;
 squigglyShot:                //; GameObject 4 comes here if processing a squiggly shot
-                //050F: 11 55 20        LD      DE,$2055            ; Squiggly shot data structure"
-                //0512: 3E DB           LD      A,$DB                ; LSB of last byte of picture"
+break()                //050F: 11 55 20        LD      DE,$2055            ; Squiggly shot data structure"
+lda #$55                //0512: 3E DB           LD      A,$DB                ; LSB of last byte of picture"
                 //0514: CD 50 05        CALL    ToShotStruct        ; Copy squiggly shot to
                 //0517: 3A 46 20        LD      A,(pluShotStepCnt)  ; Get plunger ..."
                 //051A: 32 70 20        LD      (otherShot1),A      ; ... step count"
@@ -1861,6 +1862,7 @@ lda gamevars8080.playerDataMSB                //09CD: 0F              RRCA      
 ror                //09CE: 21 F8 20        LD      HL,$20F8            ; Player 1 score descriptor"
 bcs !+                //09D1: D8              RET     C                    ; Keep it if player 1 is active
 loadHL(gamevars8080.P2ScorL)                //09D2: 21 FC 20        LD      HL,$20FC            ; Else get player 2 descriptor"
+!:
 rts                //09D5: C9              RET                          ; Out
                 //
 ClearPlayField:                //ClearPlayField:
@@ -1880,6 +1882,12 @@ lda HL+1
 cmp #$1c
 bne cpf1
 inc HL+1
+addressRegister(0,$1fc00+6,4,0)
+ldx #128
+cpfSprites:
+stz VERADATA0
+dex
+bne cpfSprites
 rts
                 //09D9: 36 00           LD      (HL),$00            ; Clear screen byte"
                 //09DB: 23              INC     HL                   ; Next in row
@@ -3694,7 +3702,7 @@ noHighScore:
 lda gamevars8080.twoPlayers                //1698: 3A CE 20        LD      A,(twoPlayers)      ; Number of players"
                 //169B: A7              AND     A                    ; Is this a single player game?
 beq endGame               //169C: CA C9 16        JP      Z,$16C9             ; Yes ... short message"
-loadHL($0328)                //169F: 21 03 28        LD      HL,$2803            ; Screen coordinates"
+loadHL($1006)                //169F: 21 03 28        LD      HL,$2803            ; Screen coordinates"
 loadDE(MessageGOver)                //16A2: 11 A6 1A        LD      DE,$1AA6            ; ""GAME OVER PLAYER< >"""
 loadBC($0114)                //16A5: 0E 14           LD      C,$14                ; 20 characters"
 jsr PrintMessageDel                //16A7: CD 93 0A        CALL    PrintMessageDel     ; Print message
@@ -4734,7 +4742,8 @@ SplashAni2Struct:
                 //
                 //
 extraCAlienStruct:                //; Shot descriptor for splash shooting the extra ""C"""
-.byte $00, $10, $00, $0E, $05, $00, $00, $00, $00, $00, $07, $D0, $1C, $C8, $9B, $03               //1BC0: 00 10 00 0E 05 00 00 00 00 00 07 D0 1C C8 9B 03
+.byte $00, $10, $00, <gameTask4Alienshoot, >gameTask4Alienshoot, $00, $00, $00, $00, $00, $07, $D0, $1C, $C8, $9B, $03               //1BC0: 00 10 00 0E 05 00 00 00 00 00 07 D0 1C C8 9B 03
+
                 //AlienSprCYB:
                 //; Alien sprite C pulling upside down Y. Note the difference between this and the first picutre
                 //; above. The Y is closer to the ship. This gives the effect of the Y kind of ""sticking" in the"
