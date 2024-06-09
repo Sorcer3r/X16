@@ -623,35 +623,46 @@ bra RunGameObjNext                //028B: C3 81 02        JP      $0281         
                 //
 GameObj0:                //GameObj0:
 break()                //; Game object 0: Move/draw the player
-lda #0                //;
+                //;
                 //; This task is only called at the mid-screen ISR. It ALWAYS does its work here, even though"
                 //; the player can be on the top or bottom of the screen (not rotated).
                 //;
-                //028E: E1              POP     HL                   ; Get player object structure 2014
-                //028F: 23              INC     HL                   ; Point to blow-up status
-                //0290: 7E              LD      A,(HL)              ; Get player blow-up status"
-                //0291: FE FF           CP      $FF                  ; Player is blowing up?
-                //0293: CA 3B 03        JP      Z,$033B             ; No ... go do normal movement"
+pla                //028E: E1              POP     HL                   ; Get player object structure 2014
+sta HL
+pla
+sta HL+1
+inc HL                //028F: 23              INC     HL                   ; Point to blow-up status
+lda (HL)                //0290: 7E              LD      A,(HL)              ; Get player blow-up status"
+cmp #$ff                //0291: FE FF           CP      $FF                  ; Player is blowing up?
+beq GameObj0Normal                //0293: CA 3B 03        JP      Z,$033B             ; No ... go do normal movement"
                 //;
                 //; Handle blowing up player
-                //0296: 23              INC     HL                   ; Point to blow-up delay count
-                //0297: 35              DEC     (HL)                 ; Decrement the blow-up delay
-                //0298: C0              RET     NZ                   ; Not time for a new blow-up sprite ... out
-                //0299: 47              LD      B,A                  ; Hold sprite image number"
+inc HL                //0296: 23              INC     HL                   ; Point to blow-up delay count
+lda (HL)                //0297: 35              DEC     (HL)                 ; Decrement the blow-up delay
+dec
+sta (HL)
+beq !+                //0298: C0              RET     NZ                   ; Not time for a new blow-up sprite ... out
+rts
+!:
+tax                //0299: 47              LD      B,A                  ; Hold sprite image number"
                 //029A: AF              XOR     A                    ; 0
-                //029B: 32 68 20        LD      (playerOK),A        ; Player is NOT OK ... player is blowing up"
-                //029E: 32 69 20        LD      (enableAlienFire),A ; Alien fire is disabled"
-                //02A1: 3E 30           LD      A,$30                ; Reset count ..."
-                //02A3: 32 6A 20        LD      (alienFireDelay),A  ; ... till alien shots are enabled"
-                //02A6: 78              LD      A,B                  ; Restore sprite image number (used if we go to 39B)"
-                //02A7: 36 05           LD      (HL),$05            ; Reload time between blow-up changes"
-                //02A9: 23              INC     HL                   ; Point to number of blow-up changes
-                //02AA: 35              DEC     (HL)                 ; Count down blow-up changes
-                //02AB: C2 9B 03        JP      NZ,DrawPlayerDie    ; Still blowing up ... go draw next sprite"
+stz gamevars8080.playerOK                //029B: 32 68 20        LD      (playerOK),A        ; Player is NOT OK ... player is blowing up"
+stz gamevars8080.enableAlienFire                //029E: 32 69 20        LD      (enableAlienFire),A ; Alien fire is disabled"
+lda #$30                //02A1: 3E 30           LD      A,$30                ; Reset count ..."
+sta gamevars8080.alienFireDelay                //02A3: 32 6A 20        LD      (alienFireDelay),A  ; ... till alien shots are enabled"
+            // do later for flags                //02A6: 78              LD      A,B                  ; Restore sprite image number (used if we go to 39B)"
+lda #$05                //02A7: 36 05           LD      (HL),$05            ; Reload time between blow-up changes"
+sta (HL)
+inc HL                //02A9: 23              INC     HL                   ; Point to number of blow-up changes
+lda (HL)                //02AA: 35              DEC     (HL)                 ; Count down blow-up changes
+dec
+sta (HL)
+txa
+bne DrawPlayerDie                //02AB: C2 9B 03        JP      NZ,DrawPlayerDie    ; Still blowing up ... go draw next sprite"
                 //;
                 //; Blow up finished
-                //02AE: 2A 1A 20        LD      HL,(playerYr)       ; Player's coordinates"
-                //02B1: 06 10           LD      B,$10                ; 16 Bytes"
+break()                //02AE: 2A 1A 20        LD      HL,(playerYr)       ; Player's coordinates"
+lda #$10                //02B1: 06 10           LD      B,$10                ; 16 Bytes"
                 //02B3: CD 24 14        CALL    EraseSimpleSprite   ; Erase simple sprite (the player)
                 //02B6: 21 10 20        LD      HL,$2010            ; Restore player ..."
                 //02B9: 11 10 1B        LD      DE,$1B10            ; ... structure ..."
@@ -719,63 +730,95 @@ lda #0                //;
                 //
                 //0338: 00 00 00 ; ** Why
                 //           
-                //; Player not blowing up ... handle inputs
-                //033B: 21 68 20        LD      HL,$2068            ; Player OK flag"
-                //033E: 36 01           LD      (HL),$01            ; Flag 1 ... player is OK"
-                //0340: 23              INC     HL                   ; 2069
-                //0341: 7E              LD      A,(HL)              ; Alien shots enabled?"
+GameObj0Normal:
+break()                //; Player not blowing up ... handle inputs
+loadHL(gamevars8080.playerOK)                //033B: 21 68 20        LD      HL,$2068            ; Player OK flag"
+lda #$01
+sta (HL)                //033E: 36 01           LD      (HL),$01            ; Flag 1 ... player is OK"
+inc HL                //0340: 23              INC     HL                   ; 2069
+lda (HL)                //0341: 7E              LD      A,(HL)              ; Alien shots enabled?"
                 //0342: A7              AND     A                    ; Set flags
-                //0343: C3 B0 03        JP      $03B0                ; Continue
+                //0343: C3 B0 03        JP      $03B0                ; Continue  moved 3b0 here .. made sense
+bne movePlayerShip                //03B0: C2 4A 03        JP      NZ,$034A            ; Alien shots enabled ... move player's ship, draw it, and out"
+inc HL                //03B3: 23              INC     HL                   ; To 206A
+lda (HL)
+dec
+sta (HL)                //03B4: 35              DEC     (HL)                 ; Time until aliens can fire
+bne movePlayerShip                //03B5: C2 4A 03        JP      NZ,$034A            ; Not time to enable ... move player's ship, draw it, and out"
+                //03B8: C3 46 03        JP      $0346                ; Enable alien fire ... move player's ship, draw it, and out"
+
+
+
                 //
+enableAlienFire:
                 //0346: 00              NOP                          ; ** Why?
-                //0347: 2B              DEC     HL                   ; 2069
-                //0348: 36 01           LD      (HL),$01            ; Enable alien fire"
+dec HL                //0347: 2B              DEC     HL                   ; 2069
+lda #$01
+sta (HL)                //0348: 36 01           LD      (HL),$01            ; Enable alien fire"
                 //
-                //034A: 3A 1B 20        LD      A,(playerXr)        ; Current player coordinates"
-                //034D: 47              LD      B,A                  ; Hold it"
-                //034E: 3A EF 20        LD      A,(gameMode)        ; Are we in ..."
+movePlayerShip:
+lda gamevars8080.playerXr                //034A: 3A 1B 20        LD      A,(playerXr)        ; Current player coordinates"
+sta BC+1                //034D: 47              LD      B,A                  ; Hold it"
+lda gamevars8080.gameMode                //034E: 3A EF 20        LD      A,(gameMode)        ; Are we in ..."
                 //0351: A7              AND     A                    ; ... game mode?
-                //0352: C2 63 03        JP      NZ,$0363            ; Yes ... use switches as player controls"
+bne usePlayerInputs                //0352: C2 63 03        JP      NZ,$0363            ; Yes ... use switches as player controls"
                 //;
-                //0355: 3A 1D 20        LD      A,(nextDemoCmd)     ; Get demo command"
-                //0358: 0F              RRCA                         ; Is it right?
-                //0359: DA 81 03        JP      C,MovePlayerRight   ; Yes ... do right"
-                //035C: 0F              RRCA                         ; Is it left?
-                //035D: DA 8E 03        JP      C,MovePlayerLeft    ; Yes ... do left"
-                //0360: C3 6F 03        JP      $036F                ; Skip over movement (draw player and out)
+lda gamevars8080.nextDemoCmd                //0355: 3A 1D 20        LD      A,(nextDemoCmd)     ; Get demo command"
+ror                //0358: 0F              RRCA                         ; Is it right?
+bcs MovePlayerRight                //0359: DA 81 03        JP      C,MovePlayerRight   ; Yes ... do right"
+ror                //035C: 0F              RRCA                         ; Is it left?
+bcs MovePlayerLeft                //035D: DA 8E 03        JP      C,MovePlayerLeft    ; Yes ... do left"
+bra drawPlayerSprite                //0360: C3 6F 03        JP      $036F                ; Skip over movement (draw player and out)
                 //; Player is in control
-                //0363: CD C0 17        CALL    ReadInputs          ; Read active player controls
-                //0366: 07              RLCA                         ; Test for ...
-                //0367: 07              RLCA                         ; ... right button
-                //0368: DA 81 03        JP      C,MovePlayerRight   ; Yes ... handle move right"
-                //036B: 07              RLCA                         ; Test for left button
-                //036C: DA 8E 03        JP      C,MovePlayerLeft    ; Yes ... handle move left"
+usePlayerInputs:
+jsr ReadInputs                //0363: CD C0 17        CALL    ReadInputs          ; Read active player controls
+rol                //0366: 07              RLCA                         ; Test for ...
+rol                //0367: 07              RLCA                         ; ... right button
+bcs MovePlayerRight                //0368: DA 81 03        JP      C,MovePlayerRight   ; Yes ... handle move right"
+rol                //036B: 07              RLCA                         ; Test for left button
+bcs MovePlayerLeft                //036C: DA 8E 03        JP      C,MovePlayerLeft    ; Yes ... handle move left"
                 //; Draw player sprite
-                //036F: 21 18 20        LD      HL,$2018            ; Active player descriptor"
-                //0372: CD 3B 1A        CALL    ReadDesc            ; Load 5 byte sprite descriptor in order: EDLHB
-                //0375: CD 47 1A        CALL    ConvToScr           ; Convert HL to screen coordinates
-                //0378: CD 39 14        CALL    DrawSimpSprite      ; Draw player
+drawPlayerSprite:
+addressRegister(0,$1fc00 + (59*8),1,0)   // sprite number 59 1fdd8 = player
+lda SpriteArray.addressTableLo + 6  // player image = sprite 6                //036F: 21 18 20        LD      HL,$2018            ; Active player descriptor"
+sta VERADATA0                   //0372: CD 3B 1A        CALL    ReadDesc            ; Load 5 byte sprite descriptor in order: EDLHB
+lda SpriteArray.addressTableHi +6                //0375: CD 47 1A        CALL    ConvToScr           ; Convert HL to screen coordinates
+sta VERADATA0
+lda gamevars8080.playerXr                 //0378: CD 39 14        CALL    DrawSimpSprite      ; Draw player
+clc
+adc #$30
+sta VERADATA0
+lda #$00
+adc #$00
+sta VERADATA0
+lda gamevars8080.playerYr
+sta VERADATA0
+stz VERADATA0
+lda #%00001100
+sta VERADATA0
+lda #%00010000
+sta VERADATA0
                 //037B: 3E 00           LD      A,$00                ; Clear the task timer. Nobody changes this but it could have ..."
-                //037D: 32 12 20        LD      (obj0TimerExtra),A  ; ... been speed set for the player with a value other than 0 (not XORA)"
-                //0380: C9              RET                          ; Out
+stz gamevars8080.obj0TimerExtra                //037D: 32 12 20        LD      (obj0TimerExtra),A  ; ... been speed set for the player with a value other than 0 (not XORA)"
+rts                //0380: C9              RET                          ; Out
                 //
-                //MovePlayerRight:
+MovePlayerRight:                //MovePlayerRight:
                 //; Handle player moving right
-                //0381: 78              LD      A,B                  ; Player coordinate"
-                //0382: FE D9           CP      $D9                  ; At right edge?
-                //0384: CA 6F 03        JP      Z,$036F             ; Yes ... ignore this"
-                //0387: 3C              INC     A                    ; Bump X coordinate
-                //0388: 32 1B 20        LD      (playerXr),A        ; New X coordinate"
-                //038B: C3 6F 03        JP      $036F                ; Draw player and out
+lda BC+1               //0381: 78              LD      A,B                  ; Player coordinate"
+cmp #$d9                //0382: FE D9           CP      $D9                  ; At right edge? PLAYER RIGHT LIMIT
+beq drawPlayerSprite                //0384: CA 6F 03        JP      Z,$036F             ; Yes ... ignore this"
+inc                //0387: 3C              INC     A                    ; Bump X coordinate
+sta gamevars8080.playerXr                //0388: 32 1B 20        LD      (playerXr),A        ; New X coordinate"
+bra drawPlayerSprite                //038B: C3 6F 03        JP      $036F                ; Draw player and out
                 //
-                //MovePlayerLeft: 
+MovePlayerLeft:                //MovePlayerLeft: 
                 //; Handle player moving left
-                //038E: 78              LD      A,B                  ; Player coordinate"
-                //038F: FE 30           CP      $30                  ; At left edge
-                //0391: CA 6F 03        JP      Z,$036F             ; Yes ... ignore this"
-                //0394: 3D              DEC     A                    ; Bump X coordinate
-                //0395: 32 1B 20        LD      (playerXr),A        ; New X coordinate"
-                //0398: C3 6F 03        JP      $036F                ; Draw player and out
+lda BC+1                //038E: 78              LD      A,B                  ; Player coordinate"
+cmp #$30                //038F: FE 30           CP      $30                  ; At left edge
+beq drawPlayerSprite                //0391: CA 6F 03        JP      Z,$036F             ; Yes ... ignore this"
+dec                //0394: 3D              DEC     A                    ; Bump X coordinate
+sta gamevars8080.playerXr                //0395: 32 1B 20        LD      (playerXr),A        ; New X coordinate"
+bra drawPlayerSprite                //0398: C3 6F 03        JP      $036F                ; Draw player and out
                 //
                 //DrawPlayerDie:
                 //; Toggle the player's blowing-up sprite between two pictures and draw it

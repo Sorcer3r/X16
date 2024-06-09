@@ -59,6 +59,7 @@
 // 640 bytes $280  - stored at $13000 + $40 per sprite , Vera addr is +2 per sprite
 // starts $13000 ends $1327f
 // sprites 0-9
+// player sprite 6, exploding 7-7
 
 // shots 15 8x8(32).txt        player shot, player shot explosion. wiggle(4) plunger(4) target(4) alien shot explosion
 //  480 bytes $1e0 - stored at $13280 + $20 per sprite, Vera addr is +1 per sprite
