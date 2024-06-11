@@ -7,7 +7,7 @@
 	"settings": {
         "files.autoSave": "afterDelay",
         "editor.acceptSuggestionOnEnter": "off",
-        "editor.fontSize": 22,
+        "editor.fontSize": 18,
         "files.associations": {
             "*.asm": "kickassembler"
 		},

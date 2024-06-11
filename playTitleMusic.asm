@@ -57,7 +57,7 @@ IRQ_Sound:{
     bmi !stopAll+
     dec
     beq IRQ_playTitleMusic
-    bra IRQ_playGameMusic
+    jmp IRQ_playGameMusic
 !stopAll:
     stz SoundMode
     stz GameMusicOn
@@ -335,9 +335,6 @@ IRQ_GameMusicStop:{
     lda #3      //stop game music
     sta GameMusicOn
     rts
-}
-
-
 }
 
 Restore_INT:{

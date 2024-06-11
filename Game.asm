@@ -15,7 +15,7 @@ main: {
 	jsr drawPianoKeys
 	//bra part2
 	jsr Music.IRQ_SoundSetup
-	jsr IRQ_TitleMusicStart
+	jsr Music.IRQ_TitleMusicStart
 PlayTitle:
 	lda Music.finished
 	beq PlayTitle
