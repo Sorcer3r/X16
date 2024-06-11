@@ -8,8 +8,12 @@
 .const pianoKeyRow2 = VRAM_layer1_map +(18*256)
 
 //$1:F9C0-$1:F9FF	VERA PSG Registers (16 x 4 bytes)
-// voice0 1f9c0-1f9c3
+// voice1 1f9c0-1f9c3
 // voice2 1f9c4-1f9c7
+// voice3 1f9c8-1f9cb
+// voice4 1f9cc-1f9cf
+
+
 
 // each 4 bytes:
 //0	Frequency word (7:0)
@@ -32,9 +36,40 @@ voice1Ptr:  .byte 0
 voice2Ptr:  .byte 0
 voice1Time: .byte 0
 voice2Time: .byte 0
+voice3FreqLo: .byte 0
+voice3FreqHi: .byte 0
+voice3Step:   .byte 0  // +127 to -128
+voice3Time: .byte 0
+voice4FreqLo: .byte 0
+voice4FreqHi: .byte 0
+voice4Step:   .byte 0  // +127 to -128
+voice4Time: .byte 0
+
+GameMusicOn:    .byte 0 // 0 = off, 1 = playing, 2 = Start, 3 = stop
+SoundMode:      .byte 0 // 0 = off, 1 = title music, 2 = ingame sound+music, 128 = turn sounds off (stop all)
 finished:   .byte 0
 
 INT_Save: .word $deaf
+
+IRQ_Sound:{
+    lda SoundMode
+    beq IRQ_SoundX  // no noises!
+    bmi !stopAll+
+    dec
+    beq IRQ_playTitleMusic
+    bra IRQ_playGameMusic
+!stopAll:
+    stz SoundMode
+    stz GameMusicOn
+    addressRegister(0,VERAPSG0,1,0)
+    ldx #4*4    // 4 * number of voices that could be on - increase if we use more
+!stopPSG:
+    stz VERADATA0
+    dex
+    bne !stopPSG-
+IRQ_SoundX:
+    jmp (INT_Save)
+}
 
 //call on frame int
 IRQ_playTitleMusic:{
@@ -154,9 +189,33 @@ IRQ_playTitleMusicX:
 }
 
 IRQ_playGameMusic:{
+    addressRegister(0,VERAPSG0,1,0)
+    lda GameMusicOn
+    //bne !notStopped+
+    beq IRQ_playGameMusicX  // 0 = music not currently playing
+!notStopped:
+    dec
+    beq playNextNote        // 1 = playing
+    dec
+    beq startGameMusic      // 2 = start from beginning
+                            // get here - must be 3 (stop)
+    stz GameMusicOn         // set mode to stopped
+    //addressRegister(0,VERAPSG0,1,0) // and turn off voice 1
+    stz VERADATA0
+    stz VERADATA0
+    stz VERADATA0
+    stz VERADATA0
+    bra IRQ_playGameMusicX
+startGameMusic:
+	lda #0
+	sta voice1Ptr
+	inc
+	sta voice1Time
+    sta GameMusicOn     // set to 1 - playing
+playNextNote:
     dec voice1Time
     bne IRQ_playGameMusicX  // countdown not zero so exit
-    addressRegister(0,VERAPSG0,1,0)
+    //addressRegister(0,VERAPSG0,1,0)
     lda voice1Ptr
     asl             // *2
     tax
@@ -165,7 +224,7 @@ IRQ_playGameMusic:{
     ldx #$00            // end of tune reached so reset 
     stx voice1Ptr
 setVoice1:
-    addressRegister(0,VERAPSG0,1,0)
+    //addressRegister(0,VERAPSG0,1,0)
     lda gameTune,x         //freq low 
     sta VERADATA0
     lda gameTune+1,x       //freq hi
@@ -182,22 +241,31 @@ setVoice1:
     inc voice1Ptr
 
 IRQ_playGameMusicX:
+    //  Check for other sounds to play - ideally using voice 3/4/etc (game music is on 1)
+
     jmp (INT_Save)
 }
 
 
-IRQ_TitleMusicSetup:{
+IRQ_SoundSetup:{
 	// setup int for title music
     lda $314
     sta INT_Save
     lda $315
     sta INT_Save+1
     sei
-    lda #<IRQ_playTitleMusic
+    lda #<IRQ_Sound
     sta $314
-    lda #>IRQ_playTitleMusic
+    lda #>IRQ_Sound
     sta $315
 
+    lda #128
+    sta SoundMode   
+	cli
+	rts
+}
+
+IRQ_TitleMusicStart:{
 	lda #0
 	sta voice1Ptr
 	sta voice2Ptr
@@ -205,27 +273,71 @@ IRQ_TitleMusicSetup:{
 	inc
 	sta voice1Time
 	sta voice2Time
-	cli
+    lda #1
+    sta SoundMode
 	rts
 }
 
-IRQ_GameMusicSetup:{
-	// setup int for title music
-    lda $314
-    sta INT_Save
-    lda $315
-    sta INT_Save+1
-    sei
-    lda #<IRQ_playGameMusic
-    sta $314
-    lda #>IRQ_playGameMusic
-    sta $315
-	lda #0
-	sta voice1Ptr
-	inc
-	sta voice1Time
-	cli
+
+IRQ_TitleMusicStop:{
+    lda #128
+    sta SoundMode
 	rts
+}
+
+// IRQ_TitleMusicSetup:{
+// 	// setup int for title music
+//     lda $314
+//     sta INT_Save
+//     lda $315
+//     sta INT_Save+1
+//     sei
+//     lda #<IRQ_playTitleMusic
+//     sta $314
+//     lda #>IRQ_playTitleMusic
+//     sta $315
+
+// 	lda #0
+// 	sta voice1Ptr
+// 	sta voice2Ptr
+// 	sta finished
+// 	inc
+// 	sta voice1Time
+// 	sta voice2Time
+// 	cli
+// 	rts
+// }
+
+// IRQ_GameMusicSetup:{
+// 	// setup int for title music
+//     lda $314
+//     sta INT_Save
+//     lda $315
+//     sta INT_Save+1
+//     sei
+//     lda #<IRQ_playGameMusic
+//     sta $314
+//     lda #>IRQ_playGameMusic
+//     sta $315
+// //    lda #2      // start game music
+// 	stz GameMusicOn     // in game music off - enable with start call
+//     cli
+// 	rts
+
+
+IRQ_GameMusicStart:{
+    lda #2      // start game music
+	sta GameMusicOn
+    rts
+}
+
+IRQ_GameMusicStop:{
+    lda #3      //stop game music
+    sta GameMusicOn
+    rts
+}
+
+
 }
 
 Restore_INT:{

@@ -14,14 +14,14 @@ main: {
 	jsr setupCharsInVera
 	jsr drawPianoKeys
 	//bra part2
-	jsr Music.IRQ_TitleMusicSetup
-
+	jsr Music.IRQ_SoundSetup
+	jsr IRQ_TitleMusicStart
 PlayTitle:
 	lda Music.finished
 	beq PlayTitle
-	jsr Music.Restore_INT
+	jsr Music.IRQ_TitleMusicStop
 part2:
-	jsr Music.IRQ_GameMusicSetup
+	jsr Music.IRQ_GameMusicStart
 	
 playGameMusic:
 	bra playGameMusic		//forever	
