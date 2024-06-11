@@ -7,36 +7,117 @@
 
 .const pianoKeyRow2 = VRAM_layer1_map +(18*256)
 
-//$1:F9C0-$1:F9FF	VERA PSG Registers (16 x 4 bytes)
-// voice0 1f9c0-1f9c3
-// voice2 1f9c4-1f9c7
+// Callable Routines
+// Music.IRQ_SoundSetup        - configure interrupt for sound routines 
+// Music.Restore_INT           - restore interrupt to system default   
+// Music.IRQ_TitleMusicStart   - Starts title music tune playing
+// Music.IRQ_StopAllSound      - Stops all sound playing
+// Music.IRQ_GameSoundEnable   - enable in-game sound mode
+// Music.IRQ_GameMusicStart    - start playing the annoying in-game tune
+// Music.IRQ_GameMusicStop     - stop playing the annoying in-game tune
 
-// each 4 bytes:
+// VERA PSG register
+// $1:F9C0-$1:F9FF	    - 16 x 4 bytes/sound channel
+// voice1 1f9c0-1f9c3
+// voice2 1f9c4-1f9c7
+// voice3 1f9c8-1f9cb
+// voice4 1f9cc-1f9cf
+
+// each PSG is 4 bytes
 //0	Frequency word (7:0)
 //1	Frequency word (15:8)
 //2	Right(7) Left(6)	Volume(5-0) 
 //3	Waveform(7-6)	    Pulse width(5-0)
 
-//waveform
-//0	Pulse       %00
-//1	Sawtooth    %01
-//2	Triangle    %10
-//3	Noise       %11
-
 // vol max is 63 %00111111
+// waveform =
+// 0	Pulse       %00
+// 1	Sawtooth    %01
+// 2	Triangle    %10
+// 3	Noise       %11
 // pulse width max  63 %00111111  = 50% 
 
 Music:{
 
-voice1Ptr:  .byte 0
-voice2Ptr:  .byte 0
-voice1Time: .byte 0
-voice2Time: .byte 0
-finished:   .byte 0
+voice1Ptr:      .byte 0     // voice 1 and 2 are used to play tune sequences
+voice2Ptr:      .byte 0
+voice1Time:     .byte 0
+voice2Time:     .byte 0
 
-INT_Save: .word $deaf
+// voice 3,4 (up to 16) are available for other sound effects
+voice3FreqLo:   .byte 0     
+voice3FreqHi:   .byte 0
+voice3Step:     .byte 0     // +127 to -128
+voice3Time:     .byte 0     // 0 = off
 
-//call on frame int
+voice4FreqLo:   .byte 0
+voice4FreqHi:   .byte 0
+voice4Step:     .byte 0     // +127 to -128
+voice4Time:     .byte 0     // 0 = off
+
+GameMusicOn:    .byte 0 // 0 = off, 1 = playing, 2 = Start, 3 = stop
+SoundMode:      .byte 0 // 0 = off, 1 = title music, 2 = ingame sound+music, 128 = turn sounds off (stop all)
+finished:       .byte 0
+
+INT_Save:       .word $deaf
+
+IRQ_TitleMusicStart:{
+	lda #0
+	sta voice1Ptr
+	sta voice2Ptr
+	sta finished
+	inc
+	sta voice1Time
+	sta voice2Time
+    lda #1
+    sta SoundMode
+	rts
+}
+
+IRQ_StopAllSound:{
+    lda #128
+    sta SoundMode
+	rts
+}
+
+IRQ_GameSoundEnable:{
+    lda #2      // start game music
+    sta SoundMode       // ingame sounds on
+    rts
+}
+
+IRQ_GameMusicStart:{
+    lda #2      // start game music
+	sta GameMusicOn
+    rts
+}
+
+IRQ_GameMusicStop:{
+    lda #3      //stop game music
+    sta GameMusicOn
+    rts
+}
+
+IRQ_Sound:{
+    lda SoundMode
+    beq IRQ_SoundX  // no noises!
+    bmi !stopAll+
+    dec
+    beq IRQ_playTitleMusic
+    jmp IRQ_playGameMusic
+!stopAll:
+    stz SoundMode
+    stz GameMusicOn
+    addressRegister(0,VERAPSG0,1,0)
+    ldx #4*4    // 4 * number of voices that could be on - increase if we use more
+!stopPSG:
+    stz VERADATA0
+    dex
+    bne !stopPSG-
+IRQ_SoundX:
+    jmp (INT_Save)
+}
+
 IRQ_playTitleMusic:{
     lda voice1Ptr
     tay
@@ -154,9 +235,33 @@ IRQ_playTitleMusicX:
 }
 
 IRQ_playGameMusic:{
+    addressRegister(0,VERAPSG0,1,0)
+    lda GameMusicOn
+    //bne !notStopped+
+    beq IRQ_playGameMusicX  // 0 = music not currently playing
+!notStopped:
+    dec
+    beq playNextNote        // 1 = playing
+    dec
+    beq startGameMusic      // 2 = start from beginning
+                            // get here - must be 3 (stop)
+    stz GameMusicOn         // set mode to stopped
+    //addressRegister(0,VERAPSG0,1,0) // and turn off voice 1
+    stz VERADATA0
+    stz VERADATA0
+    stz VERADATA0
+    stz VERADATA0
+    bra IRQ_playGameMusicX
+startGameMusic:
+	lda #0
+	sta voice1Ptr
+	inc
+	sta voice1Time
+    sta GameMusicOn     // set to 1 - playing
+playNextNote:
     dec voice1Time
     bne IRQ_playGameMusicX  // countdown not zero so exit
-    addressRegister(0,VERAPSG0,1,0)
+    //addressRegister(0,VERAPSG0,1,0)
     lda voice1Ptr
     asl             // *2
     tax
@@ -165,7 +270,7 @@ IRQ_playGameMusic:{
     ldx #$00            // end of tune reached so reset 
     stx voice1Ptr
 setVoice1:
-    addressRegister(0,VERAPSG0,1,0)
+    //addressRegister(0,VERAPSG0,1,0)
     lda gameTune,x         //freq low 
     sta VERADATA0
     lda gameTune+1,x       //freq hi
@@ -182,48 +287,25 @@ setVoice1:
     inc voice1Ptr
 
 IRQ_playGameMusicX:
+    //  Check for other sounds to play - ideally using voice 3/4/etc (game music is on 1)
+
     jmp (INT_Save)
 }
 
-
-IRQ_TitleMusicSetup:{
+IRQ_SoundSetup:{
 	// setup int for title music
     lda $314
     sta INT_Save
     lda $315
     sta INT_Save+1
     sei
-    lda #<IRQ_playTitleMusic
+    lda #<IRQ_Sound
     sta $314
-    lda #>IRQ_playTitleMusic
+    lda #>IRQ_Sound
     sta $315
 
-	lda #0
-	sta voice1Ptr
-	sta voice2Ptr
-	sta finished
-	inc
-	sta voice1Time
-	sta voice2Time
-	cli
-	rts
-}
-
-IRQ_GameMusicSetup:{
-	// setup int for title music
-    lda $314
-    sta INT_Save
-    lda $315
-    sta INT_Save+1
-    sei
-    lda #<IRQ_playGameMusic
-    sta $314
-    lda #>IRQ_playGameMusic
-    sta $315
-	lda #0
-	sta voice1Ptr
-	inc
-	sta voice1Time
+    lda #128
+    sta SoundMode   
 	cli
 	rts
 }
