@@ -19,7 +19,7 @@ main: {
 PlayTitle:
 	lda Music.finished
 	beq PlayTitle
-	jsr Music.IRQ_TitleMusicStop
+	jsr Music.IRQ_StopAllSound
 part2:
 	jsr Music.IRQ_GameMusicStart
 	
