@@ -975,9 +975,9 @@ jsr BlockCopy                //0444: CD 32 1A        CALL    BlockCopy          
 lda gamevars8080.sauScoreLSB                //0447: 2A 8D 20        LD      HL,(sauScoreLSB)    ; Get pointer to saucer-score table"
 inc             //044A: 2C              INC     L                    ; Every shot explosion advances it one
                 //044B: 7D              LD      A,L                  ; Have we passed ..."
-cmp >SaucerScrTab+15                //044C: FE 63           CP      $63                  ; ... the end at 1D63 (bug! this should be $64 to cover all 16 values)
+cmp #<SaucerScrTab+15                //044C: FE 63           CP      $63                  ; ... the end at 1D63 (bug! this should be $64 to cover all 16 values)
 bcs !+                //044E: DA 53 04        JP      C,$0453             ; No .... keep it"
-lda >SaucerScrTab                //0451: 2E 54           LD      L,$54                ; Wrap back around to 1D54"
+lda #<SaucerScrTab                //0451: 2E 54           LD      L,$54                ; Wrap back around to 1D54"
 sta gamevars8080.sauScoreLSB                //0453: 22 8D 20        LD      (sauScoreLSB),HL    ; New score pointer"
 inc gamevars8080.shotCountLSB                //0456: 2A 8F 20        LD      HL,(shotCountLSB)   ; Increments with every shot ..."
                 //0459: 2C              INC     L                    ; ... but only LSB ** ...
@@ -4671,6 +4671,7 @@ MessageScore:                //MessageScore:
                 //;-------------------------- RAM initialization -----------------------------
                 //; Coppied to RAM (2000) C0 bytes as initialization.
                 //; See the description of RAM at the top of this file for the details on this data.
+.align $100
 InitializationDATA:                //
 .byte  $01, $00, $00, $10, $00, $00, $00, $00, $02, $78, $18, $78, $18, $00, $08, $00               //1B00: 01 00 00 10 00 00 00 00 02 78 38 78 38 00 F8 00
 .byte  $00, $80, $00, <GameObj0, >GameObj0, $FF, $05, $0C, $60, $1C, $d8, $08, $12, $01, $00, $00    //gameobj0 data          //1B10: 00 80 00 8E 02 FF 05 0C 60 1C 20 30 10 01 00 00   
@@ -5029,7 +5030,7 @@ MessagePlayUY:                //MessagePlayUY:
                 //
 SaucerPossibleTable:
 .byte 5,10,15,30                //1D4C: 05 10 15 30  ; Table of possible saucer scores
-.byte >SaucSoreStr,SaucSoreStr+3,SaucSoreStr+6,SaucSoreStr+9                //1D50: 94 97 9A 9D  ; Table of corresponding string prints for each possible score
+.byte SaucSoreStr,SaucSoreStr+3,SaucSoreStr+6,SaucSoreStr+9                //1D50: 94 97 9A 9D  ; Table of corresponding string prints for each possible score
                 //
 SaucerScrTab:                //SaucerScrTab:
                 //; 208D points here to the score given when the saucer is shot. It advances
