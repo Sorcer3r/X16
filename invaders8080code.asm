@@ -4233,28 +4233,6 @@ sta HL
 jmp Print4Digits                //1939: C3 AD 09        JP      Print4Digits        ; Print 4 digits in DE
                 //1988
 testchars:
-// lda #1
-// sta BC
-// lda #1
-// sta BC+1
-// lda #14
-// sta HL
-// lda #$1c
-// sta HL+1
-// lda #<testchar1
-// sta DE
-// lda #>testchar1
-// sta DE+1
-// jsr PrintMessage
-// lda #18
-// sta HL
-// lda #<testchar2
-// sta DE
-// lda #8
-// sta BC
-// lda #5
-// sta BC+1
-// jmp PrintMessage
 ldx #30
 lda #00
 sta HL
@@ -4270,7 +4248,8 @@ stz HL
 plx
 pla
 sed
-inc
+clc
+adc #$01
 cld
 dex
 bne nextTest
