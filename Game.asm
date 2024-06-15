@@ -4,7 +4,7 @@
 #import "Lib\constants.asm"
 #import "Lib\petscii.asm"
 #import "Lib\macro.asm"
-
+#import "Lib\kernal_routines.asm"
 
 *=$0801
 	BasicUpstart2(main)
@@ -21,13 +21,57 @@ PlayTitle:
 	beq PlayTitle
 	jsr Music.IRQ_StopAllSound
 part2:
+	jsr Music.IRQ_GameSoundEnable
 	jsr Music.IRQ_GameMusicStart
 	
+
 playGameMusic:
+	jsr getJoystick
+	lda getJoystick.firePressed
+	bne playGameMusic
+//	jsr Music.IRQ_GameMusicStop
+	lda Music.voicePlayTime
+	bne playGameMusic
+	jsr Music.playBell
+
+
+
 	bra playGameMusic		//forever	
 	rts
 }
 
+getJoystick:{
+    //  SNES | B | Y |SEL    |STA   |UP     |DN    |LT    |RT    |
+    //  KBD  | Z | A |L SHIFT|ENTER |CUR UP |CUR DN|CUR LT|CUR RT|z
+    // stores zero in location if key pressed, nz if not
+
+    lda #$00    //keyboard joystick
+    jsr kernal.joystick_get
+    sta kbdJoy1
+    stx kbdJoy2
+    sty kbdJoy3
+    tax
+    and #$80
+    sta firePressed // zer = key pressed
+    txa
+    and #$02
+    sta leftPressed
+    txa 
+    and #$01
+    sta rightPressed
+    txa 
+    and #$10
+    sta startPressed
+    rts
+kbdJoy1: .byte 0
+kbdJoy2: .byte 0
+kbdJoy3: .byte 0
+firePressed: .byte 0
+leftPressed: .byte 0
+rightPressed: .byte 0
+startPressed: .byte 0
+
+}
 setDisplay:{
 // set 40 chars etc
 	setDCSel(0)
