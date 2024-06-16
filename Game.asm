@@ -9,18 +9,24 @@
 *=$0801
 	BasicUpstart2(main)
 main: {
+	jsr setupCharsInVera
 	jsr setDisplay
 	jsr clearScreen
-	jsr setupCharsInVera
 	jsr drawPianoKeys
+	stz drawTitlePage.titlePageCounter
 	//bra part2
 	jsr Music.IRQ_SoundSetup
+PlayTitleRepeat:
 	jsr Music.IRQ_TitleMusicStart
 PlayTitle:
+	wai
+	jsr drawTitlePage
 	lda Music.finished
-	beq PlayTitle
+	bne PlayTitleRepeat
+	jsr getJoystick
+	lda getJoystick.startPressed
+	bne PlayTitle
 	jsr Music.IRQ_StopAllSound
-part2:
 	jsr Music.IRQ_GameSoundEnable
 	jsr Music.IRQ_GameMusicStart
 	
@@ -29,13 +35,9 @@ playGameMusic:
 	jsr getJoystick
 	lda getJoystick.firePressed
 	bne playGameMusic
-//	jsr Music.IRQ_GameMusicStop
 	lda Music.voicePlayTime
 	bne playGameMusic
 	jsr Music.playBell
-
-
-
 	bra playGameMusic		//forever	
 	rts
 }
@@ -114,25 +116,229 @@ topRow:
 	lda #$08			//reset x to col 4
 	sta VERAAddrLow	
 	inc VERAAddrHigh	//move down a row
-	//lda #0				//char 0 
+	lda #$fc				//char 252
 	ldx #32
 bottomRow:
-	stz VERADATA0
+	sta VERADATA0
 	sty VERADATA0
 	dex
-	bne bottomRow	
+	bne bottomRow
+
+	lda #$08
+	sta VERAAddrLow
+	inc VERAAddrHigh
+	ldx #32
+	ldy #YELLOW << 4
+	lda #$20
+yellowRow:
+	sta VERADATA0
+	sty VERADATA0
+	dex
+	bne yellowRow
+	lda #$08
+	sta VERAAddrLow
+	inc VERAAddrHigh
+	ldx #6
+	ldy #RED << 4
+	lda #$20
+redRow:
+	sta VERADATA0
+	sty VERADATA0
+	dex
+	bne redRow
+	ldx #26
+	ldy #GREEN << 4
+	lda #$20
+greenRow:
+	sta VERADATA0
+	sty VERADATA0
+	dex
+	bne greenRow
+//          press start to begin
+
+	lda #$08
+	sta VERAAddrLow
+	inc VERAAddrHigh
+	inc VERAAddrHigh
+	ldy #WHITE
+	ldx #0
+titleText1:
+	lda text1,x
+	sta VERADATA0
+	sty VERADATA0
+	inx
+	cpx #32
+	bne titleText1
+	lda #$08
+	sta VERAAddrLow
+	inc VERAAddrHigh
+	ldy #WHITE
+	ldx #0
+titleText2:
+	lda text2,x
+	sta VERADATA0
+	sty VERADATA0
+	inx
+	cpx #32
+	bne titleText2
 	rts
 
+text1:
+.text "  x16 version by oldskoolcoder  "
+text2:
+.text "original version - matthew smith"
+
 pianoTopRow:{
-	.byte 1,3,3,2,1,3,2,1,3,3,2,1,3,2,1,3,2,1,3,3,2,1,3,2,1,3,3,2,1,3,2,0
+//	.byte 1,3,3,2,1,3,2,1,3,3,2,1,3,2,1,3,2,1,3,3,2,1,3,2,1,3,3,2,1,3,2,0
+	.byte $fd,$ff,$ff,$fe,$fd,$ff,$fe,$fd,$ff,$ff,$fe,$fd,$ff,$fe,$fd,$ff
+	.byte $fe,$fd,$ff,$ff,$fe,$fd,$ff,$fe,$fd,$ff,$ff,$fe,$fd,$ff,$fe,$fc
+
 }
+}
+
+drawTitlePage:{
+	.const MMrow1 = $b2
+	.const MMrow2 = $b9
+	lda titlePageCounter
+	inc titlePageCounter
+	tay
+	and #$3f
+	bne drawTitlePage_X
+	tya
+	and #%01000000
+	clc
+	rol
+	rol
+	rol
+	sta titlePageCycle
+	jsr clearRows
+	ldx #$00
+!titleRow1:
+	addressRegister(0,$1b000,1,0)
+	lda MMtitleScreen.charY,x
+	eor titlePageCycle
+	clc
+	adc #MMrow1
+	sta VERAAddrHigh
+	lda MMtitleScreen.charTopRowX,x
+	asl
+	sta VERAAddrLow
+	//lda MMtitleScreen.topRow,x
+	txa
+	jsr drawBigChar
+	inx
+	cpx #$05
+	bne !titleRow1-
+	ldx #$00
+!titleRow2:
+	addressRegister(0,$1b000,1,0)
+	lda MMtitleScreen.charY,x
+	eor titlePageCycle
+	eor #$01
+	clc
+	adc #MMrow2
+	sta VERAAddrHigh
+	lda MMtitleScreen.charBotRowX,x
+	asl
+	sta VERAAddrLow
+	//lda MMtitleScreen.botRow,x
+	txa
+	clc
+	adc #$05
+	jsr drawBigChar
+	inx
+	cpx #$05
+	bne !titleRow2-
+drawTitlePage_X:
+	addressRegister(0,$1c314,1,0)
+	ldy #YELLOW << 4
+	lda titlePageCounter
+	and #$20
+	beq clear3
+	ldy #YELLOW << 4 | YELLOW
+clear3:
+	ldx #$0
+clearLoop3:
+	lda startMessage,x
+	sta VERADATA0
+	sty VERADATA0
+	inx
+	cpx #20
+	bne clearLoop3
+	rts
+
+clearRows:
+	addressRegister(0,$1b000,1,0)
+	lda #MMrow1
+	sta VERAAddrHigh
+	ldy #13
+clearLoop1:
+	ldx #80
+clearLoop2:
+	stz VERADATA0
+	stz VERADATA0
+	dex
+	bne clearLoop2
+	inc VERAAddrHigh
+	stz VERAAddrLow
+	dey
+	bne clearLoop1
+	rts
+
+startMessage:
+	.text "press start to begin"
+	titlePageCounter:
+	.byte 0
+	titlePageCycle:
+	.byte 0
+}
+
+drawBigChar:{
+	// veraaddr is set to topleft of this char
+	// a = char
+
+	phx
+	ldy VERAAddrLow
+	tax
+	lda #$00
+	cpx #$00
+!drawBig1:
+	beq !drawBig2+
+	clc
+	adc #25
+	dex
+	bra !drawBig1-
+!drawBig2:
+	sta bigChar
+	ldx #$05
+!drawBigRow:
+	phx
+	ldx #$05
+!drawBigCol:
+	lda #$20
+	sta VERADATA0
+	lda bigChar: MMtitleScreen.M_RED
+	sta VERADATA0
+	inc bigChar
+	dex
+	bne !drawBigCol-
+	sty VERAAddrLow
+	inc VERAAddrHigh
+	plx
+	dex
+	bne !drawBigRow-
+	plx
+	rts
 }
 
 setupCharsInVera:{
-	copyDataToVera(Tile0,$00000,32) 
-	stz VERA_L1_tilebase
+//	copyDataToVera(Tile0,$00000,32) 
+	copyDataToVera(Tile0,$1f7e0,32) 
+
+	//stz VERA_L1_tilebase
 	rts
 }
 #import "playTitleMusic.asm"
 #import "tuneData.asm"
 #import "pianokeysCharSet.asm"
+#import "titleScreenChars.asm"

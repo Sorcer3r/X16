@@ -82,6 +82,7 @@ IRQ_TitleMusicStart:{
 IRQ_StopAllSound:{
     lda #128
     sta SoundMode
+    wai
 	rts
 }
 
