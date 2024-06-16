@@ -1,7 +1,7 @@
 .cpu _65c02
 #importonce 
 #import "tuneData.asm"
-#import "Lib\macro.asm"
+#import "Lib//macro.asm"
 #import "Game.asm"
 #import "notePositions.asm"
 
