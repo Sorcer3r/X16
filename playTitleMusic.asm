@@ -104,12 +104,17 @@ IRQ_GameMusicStop:{
 }
 
 IRQ_Sound:{
+    backupVeraAddrInfo()
     lda SoundMode
     beq IRQ_SoundX  // no noises!
     bmi !stopAll+
     dec
-    beq IRQ_playTitleMusic
-    jmp IRQ_playGameMusic
+    beq !titlePlay+
+    jsr IRQ_playGameMusic
+    bra IRQ_SoundX
+!titlePlay:    
+    jsr IRQ_playTitleMusic
+    bra IRQ_SoundX
 !stopAll:
     stz SoundMode
     stz GameMusicOn
@@ -120,6 +125,7 @@ IRQ_Sound:{
     dex
     bne !stopPSG-
 IRQ_SoundX:
+    restoreVeraAddrInfo()
     jmp (INT_Save)
 }
 
@@ -235,7 +241,7 @@ thisBlueNote:
     stx VERADATA0       // put colour in  
 
 IRQ_playTitleMusicX:
-    jmp (INT_Save)                  // System IRQ
+    rts
 }
 
 IRQ_playGameMusic:{
@@ -302,9 +308,8 @@ checkNextEffect:
     inx
     cpx #$04
     bne checkEffects
-
-IRQ_Exit:
-    jmp (INT_Save)
+//IRQ_Exit:
+    rts
 }
 
 playGameSoundEffect:{
@@ -397,7 +402,7 @@ playBell:{
 // y is voice to use
     ldy #$00    //using voice 0
     ldx #$00
-playBellSetup:
+playBellLoop:
     lda bellSound,x
     sta voiceFreqLo,y
     iny
@@ -406,7 +411,7 @@ playBellSetup:
     iny     // add 4 to y
     inx
     cpx #$09
-    bne playBellSetup
+    bne playBellLoop
     rts
 
 // voiceFreqLo
