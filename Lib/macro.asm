@@ -1,3 +1,4 @@
+.cpu _65c02
 #importonce
 // macro files
 #import "constants.asm"
@@ -17,12 +18,10 @@
     .byte $db
 }
 
-.macro addressRegister(control,address,increment,direction) {
-	
+.macro addressRegister(control,address,increment,direction){
 	.if (control == 0){
         // CTRL Bit 0 Controls which Data Byte to use,
         // either DATA0 or DATA1 respectively
-
         // using DATA0
         lda VERACTRL
         and #%11111110
@@ -33,26 +32,20 @@
 		ora #$01
 		sta VERACTRL
 	}
-
 	lda #address
 	sta VERAAddrLow
-
 	lda #address>>8
 	sta VERAAddrHigh
-	
-	lda #(increment<<4 ) | address>>16 | direction<<3
+    lda #(increment<<4 ) | address>>16 | direction<<3
 	sta VERAAddrBank
-
 }
 
-.macro resetVera() {
-	
+.macro resetVera(){
     lda #$80
     sta VERACTRL
 }
 
-.macro backupVeraAddrInfo()
-{
+.macro backupVeraAddrInfo(){
     lda VERACTRL
     sta veraAddr
     lda VERAAddrLow
@@ -63,8 +56,7 @@
     sta veraAddr + 3
 }
 
-.macro restoreVeraAddrInfo()
-{
+.macro restoreVeraAddrInfo(){
     lda veraAddr
     sta VERACTRL
     lda veraAddr + 1
@@ -75,37 +67,32 @@
     lda VERAAddrBank
 }
 
-.macro setDCSel(dcSel)
- {
+.macro setDCSel(dcSel){
     lda VERACTRL
     and #%10000001
     ora #dcSel<<1
     sta VERACTRL
  }
 
- .macro copyVERAData(source,destination,bytecount) // max 256 bytes
-{
+.macro copyVERAData(source,destination,bytecount){ // max 256 bytes
     // source greater than dest - regular copy
     .if (source > destination) {
     addressRegister(0,source,1,0)
     addressRegister(1,destination,1,0)
     } else {
     // source below dest - do backwards starting at end
-    addressRegister(0,source + bytecount-2,1,1)
-    addressRegister(1,destination+bytecount-2,1,1)
+    addressRegister(0,source + bytecount,1,1)
+    addressRegister(1,destination+bytecount,1,1)
     }
     ldy #bytecount
 copyloop:
     lda VERADATA0
- 	sta VERADATA1
- 	dey
- 	bne copyloop
+    sta VERADATA1
+    dey
+    bpl copyloop
 }
 
-.macro copyDataToVera(source,destination,bytecount) 
-// source is x16 memory . dest is vera location, bytecount max 65535
-// destroys a
-{
+.macro copyDataToVera(source,destination,bytecount){     // source is x16 memory . dest is vera location, bytecount max 65535. destroys a
 addressRegister(0,destination,1,0)
 lda counter: $deaf
 lda #bytecount & $ff

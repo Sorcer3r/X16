@@ -42,6 +42,12 @@
 .const VERASPRITEBASE   = $1FC00
 .const VERAPSG0         = $1f9c0
 .const VERAPSG1         = $1f9c4
+.const VERAPSG2         = $1f9c8
+.const VERAPSG3         = $1f9cc
+.const VERAPSG14        = $1f9f8
+.const VERAPSG15        = $1f9fc
+
+
 
 // ROM Banks
 .const ROM_BANK         = $01
