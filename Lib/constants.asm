@@ -32,19 +32,27 @@
 .const VERA_L1_vscrollHi = $9F3A
 
 // VRAM Addresses
-.const VRAM_layer1_map   = $1B000
-.const VRAM_layer0_map   = $00000
-.const VRAM_lowerchars   = $0B000
-.const VRAM_lower_rev    = VRAM_lowerchars + 128*8
-.const SPRITEDATA        = $13000
-.const VRAM_petscii      = $1F000
-.const VRAMPalette       = $1FA00
-.const VERASPRITEBASE    = $1FC00
+.const VRAM_layer1_map  = $1B000
+.const VRAM_layer0_map  = $00000
+.const VRAM_lowerchars  = $0B000
+.const VRAM_lower_rev   = VRAM_lowerchars + 128*8
+.const SPRITEDATA       = $13000
+.const VRAM_petscii     = $1F000
+.const VRAMPalette      = $1FA00
+.const VERASPRITEBASE   = $1FC00
+.const VERAPSG0         = $1f9c0
+.const VERAPSG1         = $1f9c4
+.const VERAPSG2         = $1f9c8
+.const VERAPSG3         = $1f9cc
+.const VERAPSG14        = $1f9f8
+.const VERAPSG15        = $1f9fc
+
+
 
 // ROM Banks
-.const ROM_BANK          = $01
-.const BASIC_BANK        = 4
-.const CHARSET_BANK      = 6
+.const ROM_BANK         = $01
+.const BASIC_BANK       = 4
+.const CHARSET_BANK     = 6
 
 //DCSCALE Factors
 .const DCSCALEx1 = $80
