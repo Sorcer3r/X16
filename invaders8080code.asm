@@ -1007,10 +1007,10 @@ rts                //0475: C9              RET                          ; Done
                 //
 GameObj2:                //GameObj2:
 //break()                //; Game object 2: Alien rolling-shot (targets player specifically)
-lda #$02                //;
-pla
-pla
-rts                //; The 2-byte value at 2038 is where the firing-column-table-pointer would be (see other
+//lda #$02                //;
+// pla
+// pla
+//rts                //; The 2-byte value at 2038 is where the firing-column-table-pointer would be (see other
                 //; shots ... next game objects). This shot doesn't use that table. It targets the player
                 //; specifically. Instead the value is used as a flag to have the shot skip its first
                 //; attempt at firing every time it is reinitialized (when it blows up).
@@ -1023,7 +1023,8 @@ rts                //; The 2-byte value at 2038 is where the firing-column-table
                 //; When the timer is 1 the plunger-shot (object 3) runs.
                 //; When the timer is 0 this object, the rolling-shot, runs."
                 //;
-                //0476: E1              POP     HL                   ; Game object data
+pla                //0476: E1              POP     HL                   ; Game object data
+pla
 lda InitializationDATA+$32                //0477: 3A 32 1B        LD      A,($1B32)           ; Restore delay from ..."
 sta gamevars8080.obj2TimerExtra                //047A: 32 32 20        LD      (obj2TimerExtra),A  ; ... ROM mirror (value 2)"
 lda gamevars8080.rolShotCFirLSB                //047D: 2A 38 20        LD      HL,(rolShotCFirLSB) ; Get pointer to ..."
@@ -1041,25 +1042,30 @@ sta gamevars8080.rolShotCFirMSB
 rts                //0489: C9              RET                          ; And out
                 //
 GameObj2Fire:
-break()                //048A: 11 35 20        LD      DE,$2035            ; Rolling-shot data structure"
+lda #<gamevars8080.rolShotStatus                //048A: 11 35 20        LD      DE,$2035            ; Rolling-shot data structure"
+sta DE
+lda #>gamevars8080.rolShotStatus
+sta DE+1
+
 lda #$f9                //048D: 3E F9           LD      A,$F9                ; Last picture of ""rolling" alien shot"
-                //048F: CD 50 05        CALL    ToShotStruct        ; Set code to handle rolling-shot
-                //0492: 3A 46 20        LD      A,(pluShotStepCnt)  ; Get the plunger-shot step count"
-                //0495: 32 70 20        LD      (otherShot1),A      ; Hold it"
-                //0498: 3A 56 20        LD      A,(squShotStepCnt)  ; Get the squiggly-shot step count"
-                //049B: 32 71 20        LD      (otherShot2),A      ; Hold it"
-                //049E: CD 63 05        CALL    HandleAlienShot     ; Handle active shot structure
+jsr ToShotStruct                //048F: CD 50 05        CALL    ToShotStruct        ; Set code to handle rolling-shot
+lda gamevars8080.pluShotStepCnt                //0492: 3A 46 20        LD      A,(pluShotStepCnt)  ; Get the plunger-shot step count"
+sta gamevars8080.otherShot1                //0495: 32 70 20        LD      (otherShot1),A      ; Hold it"
+lda gamevars8080.squShotStepCnt                //0498: 3A 56 20        LD      A,(squShotStepCnt)  ; Get the squiggly-shot step count"
+sta gamevars8080.otherShot2                //049B: 32 71 20        LD      (otherShot2),A      ; Hold it"
+jsr HandleAlienShot                //049E: CD 63 05        CALL    HandleAlienShot     ; Handle active shot structure
                 //04A1: 3A 78 20        LD      A,(aShotBlowCnt)    ; Blow up counter"
                 //04A4: A7              AND     A                    ; Test if shot has cycled through blowing up
-                //04A5: 21 35 20        LD      HL,$2035            ; Rolling-shot data structure"
-                //04A8: C2 5B 05        JP      NZ,FromShotStruct   ; If shot is still running, copy the updated data and out"
-                //
-                //ResetShot:
+loadHL(gamevars8080.rolShotStatus)                //04A5: 21 35 20        LD      HL,$2035            ; Rolling-shot data structure"
+lda gamevars8080.aShotBlowCnt
+beq ResetShot                //04A8: C2 5B 05        JP      NZ,FromShotStruct   ; If shot is still running, copy the updated data and out"
+jmp FromShotStruct          //
+ResetShot:                //ResetShot:
                 //; The rolling-shot has blown up. Reset the data structure.
-                //04AB: 11 30 1B        LD      DE,$1B30            ; Reload ..."
-                //04AE: 21 30 20        LD      HL,$2030            ; ... object ..."
-                //04B1: 06 10           LD      B,$10                ; ... structure ..."
-                //04B3: C3 32 1A        JP      BlockCopy           ; ... from ROM mirror and out
+loadDE(gameobj2Ptr)                //04AB: 11 30 1B        LD      DE,$1B30            ; Reload ..."
+loadHL(gamevars8080.obj2TimerMSB)                //04AE: 21 30 20        LD      HL,$2030            ; ... object ..."
+loadBC($1000)                //04B1: 06 10           LD      B,$10                ; ... structure ..."
+jmp BlockCopy                //04B3: C3 32 1A        JP      BlockCopy           ; ... from ROM mirror and out
                 //
                 //
 GameObj3:                //GameObj3:
@@ -1105,52 +1111,56 @@ rts                //;
                 //0503: 3E 01           LD      A,$01                ; Disable plunger shot ..."
                 //0505: 32 6E 20        LD      (skipPlunger),A     ; ... when only one alien remains"
                 //0508: 2A 76 20        LD      HL,(aShotCFirLSB)   ; Set the plunger shot's ..."
-                //050B: C3 7E 06        JP      $067E                ; ... column-firing pointer data
+jmp updateAlienShotPtr                //050B: C3 7E 06        JP      $067E                ; ... column-firing pointer data
                 //
                 //; Game task 4 when splash screen alien is shooting extra ""C" with a squiggly shot"
 gameTask4Alienshoot:
-                //050E: E1              POP     HL                   ; Ignore the task data pointer passed on stack
-                //;
+pla                //050E: E1              POP     HL                   ; Ignore the task data pointer passed on stack
+pla                //;
 squigglyShot:                //; GameObject 4 comes here if processing a squiggly shot
-break()                //050F: 11 55 20        LD      DE,$2055            ; Squiggly shot data structure"
-lda #$55                //0512: 3E DB           LD      A,$DB                ; LSB of last byte of picture"
-                //0514: CD 50 05        CALL    ToShotStruct        ; Copy squiggly shot to
-                //0517: 3A 46 20        LD      A,(pluShotStepCnt)  ; Get plunger ..."
-                //051A: 32 70 20        LD      (otherShot1),A      ; ... step count"
-                //051D: 3A 36 20        LD      A,(rolShotStepCnt)  ; Get rolling ..."
-                //0520: 32 71 20        LD      (otherShot2),A      ; ... step count"
-                //0523: CD 63 05        CALL    HandleAlienShot     ; Handle active shot structure
-                //0526: 3A 76 20        LD      A,(aShotCFirLSB)    ; LSB of column-firing table pointer"
-                //0529: FE 15           CP      $15                  ; Have we processed all entries?
-                //052B: DA 34 05        JP      C,$0534             ; No ... don't reset it"
-                //052E: 3A 58 1B        LD      A,($1B58)           ; Reset the pointer ..."
-                //0531: 32 76 20        LD      (aShotCFirLSB),A    ; ... back to the start of the table"
+loadDE(gamevars8080.squShotStatus)                //050F: 11 55 20        LD      DE,$2055            ; Squiggly shot data structure"
+lda #$DB        // sprite squiggly?        //0512: 3E DB           LD      A,$DB                ; LSB of last byte of picture"
+jsr ToShotStruct                //0514: CD 50 05        CALL    ToShotStruct        ; Copy squiggly shot to
+lda gamevars8080.pluShotStepCnt                //0517: 3A 46 20        LD      A,(pluShotStepCnt)  ; Get plunger ..."
+sta gamevars8080.otherShot1                //051A: 32 70 20        LD      (otherShot1),A      ; ... step count"
+lda gamevars8080.rolShotStepCnt                //051D: 3A 36 20        LD      A,(rolShotStepCnt)  ; Get rolling ..."
+sta gamevars8080.otherShot2                //0520: 32 71 20        LD      (otherShot2),A      ; ... step count"
+jsr HandleAlienShot                //0523: CD 63 05        CALL    HandleAlienShot     ; Handle active shot structure
+lda gamevars8080.aShotCFirLSB                //0526: 3A 76 20        LD      A,(aShotCFirLSB)    ; LSB of column-firing table pointer"
+cmp #$15                //0529: FE 15           CP      $15                  ; Have we processed all entries?
+bcs !noReset+             //052B: DA 34 05        JP      C,$0534             ; No ... don't reset it"
+lda gameobj4Ptr+8                //052E: 3A 58 1B        LD      A,($1B58)           ; Reset the pointer ..."
+sta gamevars8080.aShotCFirLSB                //0531: 32 76 20        LD      (aShotCFirLSB),A    ; ... back to the start of the table"
+!noReset:
                 //0534: 3A 78 20        LD      A,(aShotBlowCnt)    ; Check to see if squiggly shot is done"
                 //0537: A7              AND     A                    ; 0 means blow-up timer expired
-                //0538: 21 55 20        LD      HL,$2055            ; Squiggly shot data structure"
-                //053B: C2 5B 05        JP      NZ,FromShotStruct   ; If shot is still running, go copy the updated data and out"
+loadHL(gamevars8080.squShotStatus)                //0538: 21 55 20        LD      HL,$2055            ; Squiggly shot data structure"
+lda gamevars8080.aShotBlowCnt
+bne FromShotStruct                //053B: C2 5B 05        JP      NZ,FromShotStruct   ; If shot is still running, go copy the updated data and out"
                 //
                 //; Shot explosion is over. Remove the shot.
-                //053E: 11 50 1B        LD      DE,$1B50            ; Reload"
-                //0541: 21 50 20        LD      HL,$2050            ; ... object ..."
-                //0544: 06 10           LD      B,$10                ; ... structure ..."
-                //0546: CD 32 1A        CALL    BlockCopy           ; ... from mirror
-                //0549: 2A 76 20        LD      HL,(aShotCFirLSB)   ; Copy pointer to column-firing table ..."
-                //054C: 22 58 20        LD      (squShotCFirLSB),HL ; ... back to data structure (for next shot)"
-                //054F: C9              RET                          ; Done
+loadDE(gameobj4Ptr)                //053E: 11 50 1B        LD      DE,$1B50            ; Reload"
+loadHL(gamevars8080.obj4TimerMSB)                //0541: 21 50 20        LD      HL,$2050            ; ... object ..."
+loadBC($1000)                //0544: 06 10           LD      B,$10                ; ... structure ..."
+jsr BlockCopy                //0546: CD 32 1A        CALL    BlockCopy           ; ... from mirror
+lda gamevars8080.aShotCFirLSB                //0549: 2A 76 20        LD      HL,(aShotCFirLSB)   ; Copy pointer to column-firing table ..."
+sta gamevars8080.squShotCFirLSB
+lda gamevars8080.aShotCFirMSB
+sta gamevars8080.squShotCFirMSB                //054C: 22 58 20        LD      (squShotCFirLSB),HL ; ... back to data structure (for next shot)"
+rts                //054F: C9              RET                          ; Done
                 //
-                //ToShotStruct:
-                //0550: 32 7F 20        LD      (shotPicEnd),A      ; LSB of last byte of last picture in sprite"
-                //0553: 21 73 20        LD      HL,$2073            ; Destination is the shot-structure"
-                //0556: 06 0B           LD      B,$0B                ; 11 bytes"
-                //0558: C3 32 1A        JP      BlockCopy           ; Block copy and out
+ToShotStruct:                //ToShotStruct:
+sta gamevars8080.shotPicEnd                //0550: 32 7F 20        LD      (shotPicEnd),A      ; LSB of last byte of last picture in sprite"
+loadHL(gamevars8080.aShotStatus)                //0553: 21 73 20        LD      HL,$2073            ; Destination is the shot-structure"
+loadBC($0b00)                //0556: 06 0B           LD      B,$0B                ; 11 bytes"
+jmp BlockCopy                //0558: C3 32 1A        JP      BlockCopy           ; Block copy and out
                 //
-                //FromShotStruct:
-                //055B: 11 73 20        LD      DE,$2073            ; Source is the shot-structure"
-                //055E: 06 0B           LD      B,$0B                ; 11 bytes"
-                //0560: C3 32 1A        JP      BlockCopy           ; Block copy and out
+FromShotStruct:                //FromShotStruct:
+loadDE(gamevars8080.aShotStatus)                //055B: 11 73 20        LD      DE,$2073            ; Source is the shot-structure"
+loadBC($0b00)                //055E: 06 0B           LD      B,$0B                ; 11 bytes"
+jmp BlockCopy                //0560: C3 32 1A        JP      BlockCopy           ; Block copy and out
                 //
-                //HandleAlienShot:
+HandleAlienShot:                //HandleAlienShot:
                 //; Each of the 3 shots copy their data to the 2073 structure (0B bytes) and call this.
                 //; Then they copy back if the shot is still active. Otherwise they copy from the mirror.
                 //;
@@ -1160,90 +1170,120 @@ lda #$55                //0512: 3E DB           LD      A,$DB                ; L
                 //; is looked up in a table to get the reload-rate. The smaller the rate the faster the
                 //; aliens fire. Setting rate this way keeps shots from walking on each other.
                 //;
-                //0563: 21 73 20        LD      HL,$2073            ; Start of active shot structure"
-                //0566: 7E              LD      A,(HL)              ; Get the shot status"
-                //0567: E6 80           AND     $80                  ; Is the shot active?
-                //0569: C2 C1 05        JP      NZ,$05C1            ; Yes ... go move it"
+loadHL(gamevars8080.aShotStatus)                //0563: 21 73 20        LD      HL,$2073            ; Start of active shot structure"
+lda HL                //0566: 7E              LD      A,(HL)              ; Get the shot status"
+//and #$80                //0567: E6 80           AND     $80                  ; Is the shot active?
+bpl !+
+jmp MoveAlienShot                //0569: C2 C1 05        JP      NZ,$05C1            ; Yes ... go move it"
+!:                //
+lda gamevars8080.isrSplashTask                //056C: 3A C1 20        LD      A,(isrSplashTask)   ; ISR splash task"
+cmp #$04                //056F: FE 04           CP      $04                  ; Shooting the ""C" ?"
+php
+lda gamevars8080.enableAlienFire                //0571: 3A 69 20        LD      A,(enableAlienFire) ; Alien fire enabled flag"
+plp
+beq MarkShotActive                //0574: CA B7 05        JP      Z,$05B7             ; We are shooting the extra ""C" ... just flag it active and out"
+and #$00                //0577: A7              AND     A                    ; Is alien fire enabled?
+bne !+                //0578: C8              RET     Z                    ; No ... don't start a new shot
+rts
+!:
                 //
-                //056C: 3A C1 20        LD      A,(isrSplashTask)   ; ISR splash task"
-                //056F: FE 04           CP      $04                  ; Shooting the ""C" ?"
-                //0571: 3A 69 20        LD      A,(enableAlienFire) ; Alien fire enabled flag"
-                //0574: CA B7 05        JP      Z,$05B7             ; We are shooting the extra ""C" ... just flag it active and out"
-                //0577: A7              AND     A                    ; Is alien fire enabled?
-                //0578: C8              RET     Z                    ; No ... don't start a new shot
-                //
-                //0579: 23              INC     HL                   ; 2074 step count of current shot
-                //057A: 36 00           LD      (HL),$00            ; clear the step count"
+inc HL                //0579: 23              INC     HL                   ; 2074 step count of current shot
+stz HL                //057A: 36 00           LD      (HL),$00            ; clear the step count"
                 //
                 //; Make sure it isn't too soon to fire another shot
-                //057C: 3A 70 20        LD      A,(otherShot1)      ; Get the step count of the 1st ""other shot"""
+lda gamevars8080.otherShot1               //057C: 3A 70 20        LD      A,(otherShot1)      ; Get the step count of the 1st ""other shot"""
                 //057F: A7              AND     A                    ; Any steps made?
-                //0580: CA 89 05        JP      Z,$0589             ; No ... ignore this count"
-                //0583: 47              LD      B,A                  ; Shuffle off step count"
-                //0584: 3A CF 20        LD      A,(aShotReloadRate) ; Get the reload rate (based on MSB of score)"
-                //0587: B8              CP      B                    ; Too soon to fire again?
-                //0588: D0              RET     NC                   ; Yes ... don't fire
-                //0589: 3A 71 20        LD      A,(otherShot2)      ; Get the step count of the 2nd ""other shot"""
+beq ignoreThisCount                //0580: CA 89 05        JP      Z,$0589             ; No ... ignore this count"
+sta BC+1                //0583: 47              LD      B,A                  ; Shuffle off step count"
+lda gamevars8080.aShotReloadRate                //0584: 3A CF 20        LD      A,(aShotReloadRate) ; Get the reload rate (based on MSB of score)"
+cmp BC+1                //0587: B8              CP      B                    ; Too soon to fire again?
+bcs ignoreThisCount
+rts                //0588: D0              RET     NC                   ; Yes ... don't fire
+ignoreThisCount:
+lda gamevars8080.otherShot2                //0589: 3A 71 20        LD      A,(otherShot2)      ; Get the step count of the 2nd ""other shot"""
                 //058C: A7              AND     A                    ; Any steps made?
-                //058D: CA 96 05        JP      Z,$0596             ; No steps on any shot ... we are clear to fire"
-                //0590: 47              LD      B,A                  ; Shuffle off step count"
-                //0591: 3A CF 20        LD      A,(aShotReloadRate) ; Get the reload rate (based on MSB of score)"
-                //0594: B8              CP      B                    ; Too soon to fire again?
-                //0595: D0              RET     NC                   ; Yes ... don't fire
-                //0596: 23              INC     HL                   ; 2075
-                //0597: 7E              LD      A,(HL)              ; Get tracking flag"
+beq clearToFire                //058D: CA 96 05        JP      Z,$0596             ; No steps on any shot ... we are clear to fire"
+sta BC+1                //0590: 47              LD      B,A                  ; Shuffle off step count"
+lda gamevars8080.aShotReloadRate                //0591: 3A CF 20        LD      A,(aShotReloadRate) ; Get the reload rate (based on MSB of score)"
+cmp BC+1                //0594: B8              CP      B                    ; Too soon to fire again?
+bcs clearToFire
+rts                //0595: D0              RET     NC                   ; Yes ... don't fire
+clearToFire:
+inc HL                //0596: 23              INC     HL                   ; 2075
+lda HL                //0597: 7E              LD      A,(HL)              ; Get tracking flag"
                 //0598: A7              AND     A                    ; Does this shot track the player?
-                //0599: CA 1B 06        JP      Z,$061B             ; Yes ... go make a tracking shot;"
-                //059C: 2A 76 20        LD      HL,(aShotCFirLSB)   ; Column-firing table"
-                //059F: 4E              LD      C,(HL)              ; Get next column to fire from"
-                //05A0: 23              INC     HL                   ; Bump the ...
+bne !+
+jmp makeTrackingShot                //0599: CA 1B 06        JP      Z,$061B             ; Yes ... go make a tracking shot;"
+!:
+loadHL(gamevars8080.aShotCFirLSB)                //059C: 2A 76 20        LD      HL,(aShotCFirLSB)   ; Column-firing table"
+lda HL                //059F: 4E              LD      C,(HL)              ; Get next column to fire from"
+sta BC
+inc HL                //05A0: 23              INC     HL                   ; Bump the ...
                 //05A1: 00              NOP                          ; % WHY?
-                //05A2: 22 76 20        LD      (aShotCFirLSB),HL   ; ... pointer into column table"
-                //05A5: CD 2F 06        CALL    FindInColumn        ; Find alien in target column
-                //05A8: D0              RET     NC                   ; No alien is alive in target column ... out
+lda HL
+sta gamevars8080.aShotCFirLSB                //05A2: 22 76 20        LD      (aShotCFirLSB),HL   ; ... pointer into column table"
+lda HL+1
+sta gamevars8080.aShotCFirMSB
+jsr FindInColumn                //05A5: CD 2F 06        CALL    FindInColumn        ; Find alien in target column
+bcs !+
+rts                //05A8: D0              RET     NC                   ; No alien is alive in target column ... out
+!:                //;
+jsr GetAlienCoords                //05A9: CD 7A 01        CALL    GetAlienCoords      ; Get coordinates of alien (lowest alien in firing column)
+lda BC                //05AC: 79              LD      A,C                  ; Offset ..."
+clc
+adc #$07                //05AD: C6 07           ADD     A,$07                ; ... Y by 7"
+sta HL+1                //05AF: 67              LD      H,A                  ; To H"
+lda HL                //05B0: 7D              LD      A,L                  ; Offset ..."
+sec
+sbc #$0a                //05B1: D6 0A           SUB     $0A                  ; ... X down 10
+sta HL                //05B3: 6F              LD      L,A                  ; To L"
+sta gamevars8080.alienShotYr                //05B4: 22 7B 20        LD      (alienShotYr),HL    ; Set shot coordinates below alien"
+lda HL+1
+sta gamevars8080.alienShotXr
                 //;
-                //05A9: CD 7A 01        CALL    GetAlienCoords      ; Get coordinates of alien (lowest alien in firing column)
-                //05AC: 79              LD      A,C                  ; Offset ..."
-                //05AD: C6 07           ADD     A,$07                ; ... Y by 7"
-                //05AF: 67              LD      H,A                  ; To H"
-                //05B0: 7D              LD      A,L                  ; Offset ..."
-                //05B1: D6 0A           SUB     $0A                  ; ... X down 10
-                //05B3: 6F              LD      L,A                  ; To L"
-                //05B4: 22 7B 20        LD      (alienShotYr),HL    ; Set shot coordinates below alien"
+MarkShotActive:
+loadHL(gamevars8080.aShotStatus)                //05B7: 21 73 20        LD      HL,$2073            ; Alien shot status"
+lda HL                //05BA: 7E              LD      A,(HL)              ; Get the status"
+ora #$80                //05BB: F6 80           OR      $80                  ; Mark this shot ...
+sta HL                //05BD: 77              LD      (HL),A              ; ... as actively running"
+inc HL                //05BE: 23              INC     HL                   ; 2074 step count
+lda HL
+inc                 //05BF: 34              INC     (HL)                 ; Give this shot 1 step (it just started)
+sta HL
+rts                //05C0: C9              RET                          ; Out
                 //;
-                //05B7: 21 73 20        LD      HL,$2073            ; Alien shot status"
-                //05BA: 7E              LD      A,(HL)              ; Get the status"
-                //05BB: F6 80           OR      $80                  ; Mark this shot ...
-                //05BD: 77              LD      (HL),A              ; ... as actively running"
-                //05BE: 23              INC     HL                   ; 2074 step count
-                //05BF: 34              INC     (HL)                 ; Give this shot 1 step (it just started)
-                //05C0: C9              RET                          ; Out
-                //;
-                //; Move the alien shot
-                //05C1: 11 7C 20        LD      DE,$207C            ; Alien-shot Y coordinate"
-                //05C4: CD 06 1A        CALL    CompYToBeam         ; Compare to beam position
-                //05C7: D0              RET     NC                   ; Not the right ISR for this shot
-                //;
-                //05C8: 23              INC     HL                   ; 2073 status
-                //05C9: 7E              LD      A,(HL)              ; Get shot status"
-                //05CA: E6 01           AND     $01                  ; Bit 0 is 1 if blowing up
-                //05CC: C2 44 06        JP      NZ,ShotBlowingUp    ; Go do shot-is-blowing-up sequence"
-                //05CF: 23              INC     HL                   ; 2074 step count
-                //05D0: 34              INC     (HL)                 ; Count the steps (used for fire rate)
-                //05D1: CD 75 06        CALL    $0675                ; Erase shot
-                //05D4: 3A 79 20        LD      A,(aShotImageLSB)   ; Get LSB of the image pointer"
-                //05D7: C6 03           ADD     A,$03                ; Next set of images"
-                //05D9: 21 7F 20        LD      HL,$207F            ; End of image"
-                //05DC: BE              CP      (HL)                 ; Have we reached the end of the set?
-                //05DD: DA E2 05        JP      C,$05E2             ; No ... keep it"
-                //05E0: D6 0C           SUB     $0C                  ; Back up to the 1st image in the set
-                //05E2: 32 79 20        LD      (aShotImageLSB),A   ; New LSB image pointer"
-                //05E5: 3A 7B 20        LD      A,(alienShotYr)     ; Get shot's Y coordinate"
-                //05E8: 47              LD      B,A                  ; Hold it"
-                //05E9: 3A 7E 20        LD      A,(alienShotDelta)  ; Get alien shot delta"
-                //05EC: 80              ADD     A,B                  ; Add to shots coordinate"
-                //05ED: 32 7B 20        LD      (alienShotYr),A     ; New shot Y coordinate"
-                //05F0: CD 6C 06        CALL    $066C                ; Draw the alien shot
+MoveAlienShot:                //; Move the alien shot
+loadDE(gamevars8080.alienShotXr)                //05C1: 11 7C 20        LD      DE,$207C            ; Alien-shot Y coordinate"
+jsr CompYToBeam                //05C4: CD 06 1A        CALL    CompYToBeam         ; Compare to beam position
+bcs !+
+rts                //05C7: D0              RET     NC                   ; Not the right ISR for this shot
+!:                //;
+inc HL                //05C8: 23              INC     HL                   ; 2073 status
+lda HL                //05C9: 7E              LD      A,(HL)              ; Get shot status"
+and #$01                //05CA: E6 01           AND     $01                  ; Bit 0 is 1 if blowing up
+bne ShotBlowingUp                //05CC: C2 44 06        JP      NZ,ShotBlowingUp    ; Go do shot-is-blowing-up sequence"
+inc HL                //05CF: 23              INC     HL                   ; 2074 step count
+lda HL
+inc
+sta HL                //05D0: 34              INC     (HL)                 ; Count the steps (used for fire rate)
+jsr eraseShot                //05D1: CD 75 06        CALL    $0675                ; Erase shot
+lda gamevars8080.aShotImageLSB                //05D4: 3A 79 20        LD      A,(aShotImageLSB)   ; Get LSB of the image pointer"
+clc
+adc #$03                //05D7: C6 03           ADD     A,$03                ; Next set of images"
+loadHL(gamevars8080.shotPicEnd)               //05D9: 21 7F 20        LD      HL,$207F            ; End of image"
+cmp HL                //05DC: BE              CP      (HL)                 ; Have we reached the end of the set?
+bcs !skip+                //05DD: DA E2 05        JP      C,$05E2             ; No ... keep it"
+sec
+sbc #$0c                //05E0: D6 0C           SUB     $0C                  ; Back up to the 1st image in the set
+!skip:
+sta gamevars8080.aShotImageLSB                //05E2: 32 79 20        LD      (aShotImageLSB),A   ; New LSB image pointer"
+lda gamevars8080.alienShotYr                //05E5: 3A 7B 20        LD      A,(alienShotYr)     ; Get shot's Y coordinate"
+sta BC+1                //05E8: 47              LD      B,A                  ; Hold it"
+lda gamevars8080.alienShotDelta                //05E9: 3A 7E 20        LD      A,(alienShotDelta)  ; Get alien shot delta"
+clc
+adc BC+1                //05EC: 80              ADD     A,B                  ; Add to shots coordinate"
+sta gamevars8080.alienShotYr                //05ED: 32 7B 20        LD      (alienShotYr),A     ; New shot Y coordinate"
+jsr drawAlienShot                //05F0: CD 6C 06        CALL    $066C                ; Draw the alien shot
                 //05F3: 3A 7B 20        LD      A,(alienShotYr)     ; Shot's Y coordinate"
                 //05F6: FE 15           CP      $15                  ; Still in the active playfield?
                 //05F8: DA 12 06        JP      C,$0612             ; No ... end it"
@@ -1262,9 +1302,10 @@ lda #$55                //0512: 3E DB           LD      A,$DB                ; L
                 //0612: 3A 73 20        LD      A,(aShotStatus)     ; Flag to ..."
                 //0615: F6 01           OR      $01                  ; ... start shot ...
                 //0617: 32 73 20        LD      (aShotStatus),A     ; ... blowing up"
-                //061A: C9              RET                          ; Out
+break()                //061A: C9              RET                          ; Out
                 //;
                 //; Start a shot right over the player
+makeTrackingShot:
                 //061B: 3A 1B 20        LD      A,(playerXr)        ; Player's X coordinate"
                 //061E: C6 08           ADD     A,$08                ; Center of player"
                 //0620: 67              LD      H,A                  ; To H for routine"
@@ -1275,26 +1316,32 @@ lda #$55                //0512: 3E DB           LD      A,$DB                ; L
                 //062A: 0E 0B           LD      C,$0B                ; Else use ..."
                 //062C: C3 A5 05        JP      $05A5                ; ... as far over as we can
                 //
-                //FindInColumn:
+FindInColumn:                //FindInColumn:
                 //; C contains the target column. Look for a live alien in the column starting with
                 //; the lowest position. Return C=1 if found ... HL points to found slot.
-                //062F: 0D              DEC     C                    ; Column that is firing
-                //0630: 3A 67 20        LD      A,(playerDataMSB)   ; Player's MSB (21xx or 22xx)"
-                //0633: 67              LD      H,A                  ; To MSB of HL"
-                //0634: 69              LD      L,C                  ; Column to L"
-                //0635: 16 05           LD      D,$05                ; 5 rows of aliens"
-                //0637: 7E              LD      A,(HL)              ; Get alien's status"
-                //0638: A7              AND     A                    ; 0 means dead
-                //0639: 37              SCF                          ; In case not 0
-                //063A: C0              RET     NZ                   ; Alien is alive? Yes ... return
-                //063B: 7D              LD      A,L                  ; Get the flag pointer LSB"
-                //063C: C6 0B           ADD     A,$0B                ; Jump to same column on next row of rack (+11 aliens per row)"
-                //063E: 6F              LD      L,A                  ; New alien index"
-                //063F: 15              DEC     D                    ; Tested all rows?
-                //0640: C2 37 06        JP      NZ,$0637            ; No ... keep looking for a live alien up the rack"
-                //0643: C9              RET                          ; Didn't find a live alien. Return with C=0.
+dec BC                //062F: 0D              DEC     C                    ; Column that is firing
+lda gamevars8080.playerDataMSB                //0630: 3A 67 20        LD      A,(playerDataMSB)   ; Player's MSB (21xx or 22xx)"
+sta HL+1                //0633: 67              LD      H,A                  ; To MSB of HL"
+lda BC
+sta HL                //0634: 69              LD      L,C                  ; Column to L"
+loadDE($0500)                //0635: 16 05           LD      D,$05                ; 5 rows of aliens"
+keepLooking:
+lda HL                //0637: 7E              LD      A,(HL)              ; Get alien's status"
+                    //0638: A7              AND     A                    ; 0 means dead
+sec                //0639: 37              SCF                          ; In case not 0
+beq !+
+rts                //063A: C0              RET     NZ                   ; Alien is alive? Yes ... return
+!:
+lda HL                //063B: 7D              LD      A,L                  ; Get the flag pointer LSB"
+clc
+adc #$0b                //063C: C6 0B           ADD     A,$0B                ; Jump to same column on next row of rack (+11 aliens per row)"
+sta HL                //063E: 6F              LD      L,A                  ; New alien index"
+dec DE+1                //063F: 15              DEC     D                    ; Tested all rows?
+bne keepLooking                //0640: C2 37 06        JP      NZ,$0637            ; No ... keep looking for a live alien up the rack"
+clc
+rts                //0643: C9              RET                          ; Didn't find a live alien. Return with C=0.
                 //
-                //ShotBlowingUp:
+ShotBlowingUp:                //ShotBlowingUp:
                 //; Alien shot is blowing up
                 //0644: 21 78 20        LD      HL,$2078            ; Blow up timer"
                 //0647: 35              DEC     (HL)                 ; Decrement the value
@@ -1316,20 +1363,26 @@ lda #$55                //0512: 3E DB           LD      A,$DB                ; L
                 //
                 //0667: A7              AND     A                    ; Have we reached 0?
                 //0668: C0              RET     NZ                   ; No ... keep waiting
-                //0669: C3 75 06        JP      $0675                ; Erase the explosion and out
+break()                //0669: C3 75 06        JP      $0675                ; Erase the explosion and out
                 //;
-                //066C: 21 79 20        LD      HL,$2079            ; Alien shot descriptor"
-                //066F: CD 3B 1A        CALL    ReadDesc            ; Read 5 byte structure
-                //0672: C3 91 14        JP      DrawSprCollision    ; Draw shot and out
+drawAlienShot:
+loadHL(gamevars8080.aShotImageLSB)                //066C: 21 79 20        LD      HL,$2079            ; Alien shot descriptor"
+jsr ReadDesc                //066F: CD 3B 1A        CALL    ReadDesc            ; Read 5 byte structure
+jmp DrawPlayerShot  // alien shot fix???                //0672: C3 91 14        JP      DrawSprCollision    ; Draw shot and out
                 //;
-                //0675: 21 79 20        LD      HL,$2079            ; Alien shot descriptor"
-                //0678: CD 3B 1A        CALL    ReadDesc            ; Read 5 byte structure
-                //067B: C3 52 14        JP      EraseShifted        ; Erase the shot and out
+eraseShot:
+loadHL(gamevars8080.aShotImageLSB)                //0675: 21 79 20        LD      HL,$2079            ; Alien shot descriptor"
+jsr ReadDesc                //0678: CD 3B 1A        CALL    ReadDesc            ; Read 5 byte structure
+jmp EraseShifted                //067B: C3 52 14        JP      EraseShifted        ; Erase the shot and out
                 //
-                //067E: 22 48 20        LD      (pluShotCFirLSB),HL ; From 50B, update ..."
-                //0681: C9              RET                          ; ... column-firing table pointer and out
+updateAlienShotPtr:
+lda HL
+sta gamevars8080.pluShotCFirLSB                //067E: 22 48 20        LD      (pluShotCFirLSB),HL ; From 50B, update ..."
+lda HL+1
+sta gamevars8080.pluShotCFirMSB
+rts                //0681: C9              RET                          ; ... column-firing table pointer and out
                 //
-                //       
+ //endmoveshot                //       
                 //
 GameObj4:                //GameObj4:
 //break()                //; Game object 4: Flying Saucer OR squiggly shot
@@ -1346,7 +1399,9 @@ rts                //; This task is shared by the squiggly-shot and the flying s
                 //0689: 21 83 20        LD      HL,$2083            ; Time-till-saucer flag"
                 //068C: 7E              LD      A,(HL)              ; Is it time ..."
                 //068D: A7              AND     A                    ; ... for a saucer?
-beq squigglyShot                //068E: CA 0F 05        JP      Z,$050F             ; No ... go process squiggly shot"
+bne !+          //068E: CA 0F 05        JP      Z,$050F             ; No ... go process squiggly shot"
+jmp squigglyShot            
+!:
 break()                //0691: 3A 56 20        LD      A,(squShotStepCnt)  ; Is there a ..."
 lda #4                //0694: A7              AND     A                    ; ... squiggly shot going?
                 //0695: C2 0F 05        JP      NZ,$050F            ; Yes ... go handle squiggly shot"
@@ -3132,8 +3187,8 @@ rts                //15F2: C9              RET                          ; Done
                 //
                 //1447: 00 00 00 00 00 00 00 00 00 00 00 ; ** Why?
                 //                         
-                //EraseShifted:
-                //; Erases a shifted sprite from screen (like for player's explosion)
+EraseShifted:                //EraseShifted:
+break()                //; Erases a shifted sprite from screen (like for player's explosion)
                 //1452: CD 74 14        CALL    CnvtPixNumber       ; Convert pixel number in HL to coorinates with shift
                 //1455: C5              PUSH    BC                   ; Hold BC
                 //1456: E5              PUSH    HL                   ; Hold coordinate
@@ -3157,7 +3212,7 @@ rts                //15F2: C9              RET                          ; Done
                 //146E: C1              POP     BC                   ; Restore BC (count)
                 //146F: 05              DEC     B                    ; All rows done?
                 //1470: C2 55 14        JP      NZ,$1455            ; No ... erase all"
-                //1473: C9              RET                          ; Done
+rts                //1473: C9              RET                          ; Done
                 //
                 //CnvtPixNumber:
                 //; Convert pixel number in HL to screen coordinate and shift amount.
@@ -3190,8 +3245,8 @@ rts                //15F2: C9              RET                          ; Done
                 //148D: C2 7C 14        JP      NZ,RememberShields  ; No ... do multi rows"
                 //1490: C9              RET                          ; Done
                 //
-                //DrawSprCollision:
-                //1491: CD 74 14        CALL    CnvtPixNumber       ; Convert pixel number to coord and shift
+DrawSprCollision:                //DrawSprCollision:
+break()                //1491: CD 74 14        CALL    CnvtPixNumber       ; Convert pixel number to coord and shift
                 //1494: AF              XOR     A                    ; Clear the ...
                 //1495: 32 61 20        LD      (collision),A       ; ... collision-detection flag"
                 //1498: C5              PUSH    BC                   ; Hold count
@@ -4634,7 +4689,7 @@ SplashAni1Struct:
 .byte $00, $00, $FF, $40, $FF, $04, $05, $10, $7A, $00, $20, $1C                  //1A95: 00 00 FF B8 FE 20 1C 10 9E 00 20 1C   
     //changed bytes 5/6 to sprite image numbers for alien
                 //
-                //ShotReloadRate:
+ShotReloadRate:                //ShotReloadRate:
                 //; The tables at 1CB8 and 1AA1 control how fast shots are created. The speed is based
                 //; on the upper byte of the player's score. For a score of less than or equal 0200 then
                 //; the fire speed is 30. For a score less than or equal 1000 the shot speed is 10. Less
@@ -4643,8 +4698,8 @@ SplashAni1Struct:
                 //;
                 //; 1CB8: 02 10 20 30
                 //;
-                //1AA1: 30 10 0B 08                            
-                //1AA5: 07           ; Fastest shot firing speed
+.byte $30, $10, $0b, $08                //1AA1: 30 10 0B 08                            
+.byte $07                //1AA5: 07           ; Fastest shot firing speed
                 //
 MessageGOver:                //MessageGOver:
                 //; GAME OVER PLAYER< >"""
@@ -4675,10 +4730,13 @@ MessageScore:                //MessageScore:
 InitializationDATA:                //
 .byte  $01, $00, $00, $10, $00, $00, $00, $00, $02, $78, $18, $78, $18, $00, $08, $00               //1B00: 01 00 00 10 00 00 00 00 02 78 38 78 38 00 F8 00
 .byte  $00, $80, $00, <GameObj0, >GameObj0, $FF, $05, $0C, $60, $1C, $d8, $08, $12, $01, $00, $00    //gameobj0 data          //1B10: 00 80 00 8E 02 FF 05 0C 60 1C 20 30 10 01 00 00   
-gameobj1Ptr:
+gameobj1Ptr:    //1b20
 .byte  $00, $00, $00, <GameObj1, >GameObj1, $00, $10, >$fc00+(60*8), <$fc00+(60*8), $1c, $d4, $01, $fc, $00, $FF, $FF    //gameobj1 data          //1B20: 00 00 00 BB 03 00 10 90 1C 28 30 01 04 00 FF FF   
+gameobj2Ptr:    //1b30
 .byte  $00, $00, $02, <GameObj2, >GameObj2, $00, $00, $00, $00, $00, $04, $EE, $1C, $00, $00, $03    //gameobj2 data           //1B30: 00 00 02 76 04 00 00 00 00 00 04 EE 1C 00 00 03    
+gameobj3Ptr:    //1b40
 .byte  $00, $00, $00, <GameObj3, >GameObj3, $00, $00, $01, $00, $1D, $04, $E2, $1C, $00, $00, $03    //gameobj3 data          //1B40: 00 00 00 B6 04 00 00 01 00 1D 04 E2 1C 00 00 03 
+gameobj4Ptr:    //1b50
 .byte  $00, $00, $00, <GameObj4, >GameObj4, $00, $00, $01, $06, $1D, $04, $D0, $1C, $00, $00, $03    //gameobj4 data          //1B50: 00 00 00 82 06 00 00 01 06 1D 04 D0 1C 00 00 03
 .byte  $FF, $00, $C0, $1C, $00, $00, $10, >gamevars8080.P1Data, $01, $00, $30, $00, $12, $00, $00, $00              //1B60: FF 00 C0 1C 00 00 10 21 01 00 30 00 12 00 00 00         
                 //
@@ -4877,7 +4935,7 @@ MessageAdv:                //MessageAdv:
                 //1CB3: 00 01 0B 04 28                                      
                 //
                 //
-                //AReloadScoreTab:
+AReloadScoreTab:                //AReloadScoreTab:
                 //; The tables at 1CB8 and 1AA1 control how fast shots are created. The speed is based
                 //; on the upper byte of the player's score. For a score of less than or equal 0200 then
                 //; the fire speed is 30. For a score less than or equal 1000 the shot speed is 10. Less
@@ -4887,7 +4945,7 @@ MessageAdv:                //MessageAdv:
                 //; 1AA1: 30 10 0B 08
                 //; 1AA5: 07           ; Fastest shot firing speed
                 //;
-                //1CB8: 02 10 20 30                            
+.byte $02, $10, $20, $30                  //1CB8: 02 10 20 30                            
                 //
                 //MessageTilt:
                 //1CBC: 13 08 0B 13   ; ""TILT"""
@@ -4980,8 +5038,9 @@ MessagePlayUY:                //MessagePlayUY:
 .byte $0f, $0b, $00, $29                //1CFA: 0F 0B 00 29    ; ""PLAy" with an upside down 'Y' for splash screen"
                 //                       
                 //1CFE: 00 00        
-                //                             
-                //ColFireTable:
+                //
+.align $100                                             
+ColFireTable:                //ColFireTable:
                 //; This table decides which column a shot will fall from. The column number is read from the
                 //; table (1-11) and the pointer increases for the shot type. For instance, the ""squiggly" shot"
                 //; will fall from columns in this order: 0B, 01, 06, 03. If you play the game you'll see that"
@@ -4990,8 +5049,8 @@ MessagePlayUY:                //MessagePlayUY:
                 //; The ""plunger" shot uses index 00-0F (inclusive)"
                 //; The ""squiggly" shot uses index 06-14 (inclusive)"
                 //; The ""rolling" shot targets the player"
-                //1D00: 01 07 01 01 01 04 0B 01 06 03 01 01 0B 09 02 08                                      
-                //1D10: 02 0B 04 07 0A    
+.byte $01, $07, $01, $01, $01, $04, $0B, $01, $06, $03, $01, $01, $0B, $09, $02, $08              //1D00: 01 07 01 01 01 04 0B 01 06 03 01 01 0B 09 02 08                                      
+.byte $02, $0B, $04, $07, $0A              //1D10: 02 0B 04 07 0A    
                 //;
                 //; This appears to be part of the column-firing table, but it is never used."
                 //; Perhaps this was originally intended for the ""rolling" shot but then the"
