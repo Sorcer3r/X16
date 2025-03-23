@@ -4,7 +4,6 @@
 
 // macro files
 #import "constants.asm"
-<<<<<<< HEAD
 #import "\c64\MySource\XInvaders8080\zeroPage.asm"
 
 .label veraAddr = $00fc  //: .byte 0,0,0,0
@@ -16,17 +15,6 @@
 
 // 3 byte nop 65c02
 .macro skip2Bytes() {  
-=======
-
-*=*
-.label veraAddr = $0100  //: .byte 0,0,0,0
-
-.macro skip1Byte() {  // 2 byte nop 65c02
-    .byte $24  // $42 etc dont work in emulator
-}
-
-.macro skip2Bytes() {  // 3 byte nop 65c02
->>>>>>> ea2c3ad874949ee70d5f63055848e174a7146777
     .byte  $2c  // $dc and $fc dont work in emulater
 }
 
@@ -57,7 +45,6 @@
 	sta VERAAddrBank
 }
 
-<<<<<<< HEAD
 .macro loadHL(number){
     lda #<number
     sta HL
@@ -140,9 +127,6 @@
 
 .macro resetVera() {
 	
-=======
-.macro resetVera(){
->>>>>>> ea2c3ad874949ee70d5f63055848e174a7146777
     lda #$80
     sta VERACTRL
 }
@@ -158,18 +142,8 @@
     sta veraAddr + 3
 }
 
-<<<<<<< HEAD
 .macro restoreVeraAddrInfo()
 {
-=======
-.macro restoreVeraAddrInfo(){
-    lda veraAddr
-    sta VERACTRL
-    lda veraAddr + 1
-    sta VERAAddrLow
-    lda veraAddr + 2
-    sta VERAAddrHigh
->>>>>>> ea2c3ad874949ee70d5f63055848e174a7146777
     sta veraAddr + 3
     lda VERAAddrBank
     lda veraAddr + 2
@@ -180,13 +154,9 @@
     sta VERACTRL
 }
 
-<<<<<<< HEAD
 
 .macro setDCSel(dcSel)
 {
-=======
-.macro setDCSel(dcSel){
->>>>>>> ea2c3ad874949ee70d5f63055848e174a7146777
     lda VERACTRL
     and #%10000001
     ora #dcSel<<1
