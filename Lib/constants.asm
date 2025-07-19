@@ -51,8 +51,9 @@
 
 // ROM Banks
 .const ROM_BANK         = $01
-.const BASIC_BANK       = 4
-.const CHARSET_BANK     = 6
+.const BASIC_BANK       = $04
+.const CHARSET_BANK     = $06
+.const ROM_BASE         = $C000
 
 //DCSCALE Factors
 .const DCSCALEx1 = $80
