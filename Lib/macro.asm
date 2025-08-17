@@ -4,6 +4,7 @@
 #import "constants.asm"
 
 *=*
+
 .label veraAddr = $0100  //: .byte 0,0,0,0
 
 .macro skip1Byte() {  // 2 byte nop 65c02
