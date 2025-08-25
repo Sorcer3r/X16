@@ -13,7 +13,7 @@
 		},
 		"kickassembler.emulator.runtime": "C:/Users/derek/DeveloperTools/CommanderX16/x16emu.exe",
         "kickassembler.assembler.option.outputDirectory": "Bin",
-        "kickassembler.emulator.options": "-prg ${kickassembler:buildFilename} -run -scale 2 -debug -keymap en-gb -joy1",
+        "kickassembler.emulator.options": "-prg ${kickassembler:buildFilename} -run -scale 4 -debug $2000 -keymap en-gb -joy1",
         "kickassembler.assembler.jar": "C:/Users/derek/DeveloperTools/KickAssembler/KickAss.jar",
         "kickassembler.assembler.option.cfgfile": "C:/Users/derek/DeveloperTools/KickAssembler/KickAss.cfg"
 
